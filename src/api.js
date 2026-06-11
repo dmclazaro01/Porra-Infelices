@@ -159,25 +159,64 @@ export async function fetchState() {
     }).sort((a, b) => b.points - a.points);
   }
 
+  // Map to the state schema expected by render files
+  const predictions = Object.fromEntries(groupPredictions.map(p => [p.match_id, p.prediction]));
+  const tiebreaks = Object.fromEntries(tiebreakPredictions.map(t => [t.group_letter, t.team_order]));
+  const knockout_predictions = Object.fromEntries(knockoutPredictions.map(k => [k.match_number, k.winner_team_id]));
+  const bonus = bonusPredictions.length > 0 ? { top_scorer: bonusPredictions[0].top_scorer, best_player: bonusPredictions[0].best_player } : {};
+
+  const leaderboardWithRank = leaderboard.map((row, index) => ({
+    ...row,
+    participant_id: row.id,
+    total: row.points,
+    rank: index + 1,
+    prize: 0,
+  }));
+
+  const prize_pool = {
+    groups: playerGroups.map(pg => {
+      const groupPlayers = allProfiles.filter(p => p.group_name === pg.name && p.is_active);
+      const paidCount = groupPlayers.filter(p => p.has_paid).length;
+      return {
+        name: pg.name,
+        pot: paidCount * (settings.entry_fee_cents || 200),
+        paid_count: paidCount,
+        active_count: groupPlayers.length,
+        entry_fee: (settings.entry_fee_cents || 200) / 100,
+      };
+    }),
+  };
+
   return {
     profile,
+    participant: profile,
     playerGroups,
     teams,
     groupsT,
+    groups: groupsT,
     matches,
     settings,
     syncLog,
+    sync: syncLog,
     bonusAnswers,
+    bonus_answers: bonusAnswers,
     groupPredictions,
+    predictions,
     tiebreakPredictions,
+    tiebreaks,
     knockoutPredictions,
+    knockout_predictions,
     bonusPredictions,
-    allGroupPredictions: (isLocked || isAdmin) ? allGroupPredictions : [],
-    allTiebreakPredictions: (isLocked || isAdmin) ? allTiebreakPredictions : [],
-    allKnockoutPredictions: (isLocked || isAdmin) ? allKnockoutPredictions : [],
-    allBonusPredictions: (isLocked || isAdmin) ? allBonusPredictions : [],
+    bonus,
+    allGroupPredictions,
+    allTiebreakPredictions,
+    allKnockoutPredictions,
+    allBonusPredictions,
     allProfiles,
-    leaderboard,
+    players: allProfiles,
+    leaderboard: leaderboardWithRank,
+    prize_pool,
+    public_predictions: {},
   };
 }
 
