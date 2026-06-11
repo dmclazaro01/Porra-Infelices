@@ -87,7 +87,7 @@ export async function fetchState() {
   const [playerGroups, teams, groupsT, matches, settings, syncLog, bonusAnswers] = await Promise.all([
     supabase.from('player_groups').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('teams').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
-    supabase.from('groups_t').select('*, teams:groups_t_teams(*)').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('groups_t').select('*').then(r => { if (r.error) throw r.error; return r.data.map(g => ({ ...g, teams: (g.team_ids || []).map(tid => ({ team_id: tid })) })); }),
     supabase.from('matches').select('*').order('match_number').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('settings').select('*').single().then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('sync_log').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
@@ -199,6 +199,34 @@ export async function fetchState() {
     }).sort((a, b) => b.points - a.points);
   }
 
+  // Map to the state schema expected by render files
+  const predictions = Object.fromEntries(groupPredictions.map(p => [p.match_id, p.prediction]));
+  const tiebreaks = Object.fromEntries(tiebreakPredictions.map(t => [t.group_letter, t.team_order]));
+  const knockout_predictions = Object.fromEntries(knockoutPredictions.map(k => [k.match_number, k.winner_team_id]));
+  const bonus = bonusPredictions.length > 0 ? { top_scorer: bonusPredictions[0].top_scorer, best_player: bonusPredictions[0].best_player } : {};
+
+  const leaderboardWithRank = leaderboard.map((row, index) => ({
+    ...row,
+    participant_id: row.id,
+    total: row.points,
+    rank: index + 1,
+    prize: 0,
+  }));
+
+  const prize_pool = {
+    groups: playerGroups.map(pg => {
+      const groupPlayers = allProfiles.filter(p => p.group_name === pg.name && p.is_active);
+      const paidCount = groupPlayers.filter(p => p.has_paid).length;
+      return {
+        name: pg.name,
+        pot: paidCount * (settings.entry_fee_cents || 200),
+        paid_count: paidCount,
+        active_count: groupPlayers.length,
+        entry_fee: (settings.entry_fee_cents || 200) / 100,
+      };
+    }),
+  };
+
   return {
     profile,
     participant: profile,
@@ -206,10 +234,13 @@ export async function fetchState() {
     teams,
     groups: groupsT,
     groupsT,
+    groups: groupsT,
     matches,
     settings,
     syncLog,
+    sync: syncLog,
     bonusAnswers,
+    bonus_answers: bonusAnswers,
     // Object versions for renderers
     predictions,
     tiebreaks,
@@ -231,7 +262,9 @@ export async function fetchState() {
     public_bonus: all_bonus,
     all_profiles: all_profiles_map,
     allProfiles,
-    leaderboard,
+    players: allProfiles,
+    leaderboard: leaderboardWithRank,
+    prize_pool,
   };
 }
 
@@ -365,13 +398,20 @@ export async function adminUpdateBonusAnswers(topScorer, bestPlayer) {
   return data;
 }
 
-export async function adminCreatePlayer(email, password, name) {
+export async function adminCreatePlayer(email, password, name, groupName) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { name } },
   });
   if (error) throw error;
+  if (groupName && data?.user?.id) {
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ group_name: groupName })
+      .eq('id', data.user.id);
+    if (updateError) throw updateError;
+  }
   return data;
 }
 

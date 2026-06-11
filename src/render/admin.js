@@ -12,12 +12,58 @@ export function renderAdmin() {
     ]),
   ]));
 
+  wrap.append(renderGroupManagement(state));
   wrap.append(renderPlayerManagement(state));
   wrap.append(renderMatchResults(state));
   wrap.append(renderSettingsPanel(state));
   wrap.append(renderSyncPanel(state));
 
   return wrap;
+}
+
+function renderGroupManagement(state) {
+  const panel = el('article', { class: 'panel' });
+  panel.append(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'panel-title', text: 'Grupos' }),
+    el('span', { class: 'badge', text: `${(state.playerGroups || []).length} total` }),
+  ]));
+
+  const createForm = el('div', { class: 'admin-create-form' });
+  const nameInput = el('input', { type: 'text', placeholder: 'Nombre del grupo', style: 'flex:1' });
+  const createBtn = el('button', { class: 'primary', text: 'Crear grupo' });
+  const createError = el('div', { class: 'error' });
+
+  createBtn.addEventListener('click', async () => {
+    createError.textContent = '';
+    try {
+      await api.adminCreateGroup(nameInput.value.trim());
+      nameInput.value = '';
+      createError.textContent = '✓ Creado';
+      createError.style.color = 'var(--green)';
+      setTimeout(() => { createError.textContent = ''; }, 2000);
+    } catch (e) {
+      createError.textContent = e.message;
+      createError.style.color = 'var(--red)';
+    }
+  });
+
+  createForm.append(nameInput, createBtn);
+  panel.append(createForm);
+  panel.append(createError);
+
+  const list = el('div', { class: 'payment-strip' });
+  (state.playerGroups || []).forEach(group => {
+    const groupName = group.name || group;
+    list.append(el('div', { class: 'payment-item' }, [
+      el('span', { text: groupName }),
+    ]));
+  });
+  if (!(state.playerGroups || []).length) {
+    list.append(el('div', { class: 'muted-line', text: 'Sin grupos creados aún.' }));
+  }
+  panel.append(list);
+
+  return panel;
 }
 
 function renderPlayerManagement(state) {
@@ -31,16 +77,23 @@ function renderPlayerManagement(state) {
   const emailInput = el('input', { type: 'email', placeholder: 'Email del jugador', style: 'flex:1' });
   const nameInput = el('input', { type: 'text', placeholder: 'Nombre visible', style: 'flex:1' });
   const passwordInput = el('input', { type: 'password', placeholder: 'Contraseña', style: 'flex:1' });
+  const groupSelect = el('select', { style: 'flex:1' });
+  groupSelect.append(el('option', { value: '', text: 'Sin grupo' }));
+  (state.playerGroups || []).forEach(group => {
+    const groupName = group.name || group;
+    groupSelect.append(el('option', { value: groupName, text: groupName }));
+  });
   const createBtn = el('button', { class: 'primary', text: 'Crear jugador' });
   const createError = el('div', { class: 'error' });
 
   createBtn.addEventListener('click', async () => {
     createError.textContent = '';
     try {
-      await api.adminCreatePlayer(emailInput.value, passwordInput.value, nameInput.value);
+      await api.adminCreatePlayer(emailInput.value, passwordInput.value, nameInput.value, groupSelect.value || null);
       emailInput.value = '';
       nameInput.value = '';
       passwordInput.value = '';
+      groupSelect.value = '';
       createError.textContent = '✓ Creado';
       createError.style.color = 'var(--green)';
     } catch (e) {
@@ -49,7 +102,7 @@ function renderPlayerManagement(state) {
     }
   });
 
-  createForm.append(emailInput, nameInput, passwordInput, createBtn);
+  createForm.append(emailInput, nameInput, passwordInput, groupSelect, createBtn);
   panel.append(createForm);
   panel.append(createError);
 

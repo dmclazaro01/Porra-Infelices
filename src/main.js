@@ -141,14 +141,15 @@ function renderGroupChoiceScreen() {
   const buttons = document.createElement('div');
   buttons.className = 'group-choice-buttons';
   (state.playerGroups || []).forEach((group, index) => {
+    const groupName = group.name || group;
     const colorClasses = ['gb-c1', 'gb-c2', 'gb-c3', 'gb-c4', 'gb-c5', 'gb-c6'];
     const btn = document.createElement('button');
     btn.className = `group-choice-btn ${colorClasses[index % 6]}`;
-    btn.textContent = group;
+    btn.textContent = groupName;
     btn.addEventListener('click', async () => {
       error.textContent = '';
       try {
-        await joinGroup(state.profile.id, group);
+        await joinGroup(state.profile.id, groupName);
         await load();
         render();
       } catch (exc) {
@@ -203,10 +204,8 @@ async function init() {
 }
 
 subscribe(() => {
-  // Only re-render on passive tabs to avoid interrupting user input
-  if (['results', 'leaderboard', 'picks'].includes(activeTab)) {
-    render();
-  }
+  // Re-render on all tabs to reflect state changes (logout, data updates, etc.)
+  render();
 });
 
 init();
