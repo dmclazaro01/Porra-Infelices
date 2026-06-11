@@ -133,21 +133,7 @@ export async function fetchState() {
     [allGroupPredictions, allTiebreakPredictions, allKnockoutPredictions, allBonusPredictions] = allPreds;
   }
 
-  // Convert arrays to objects for easier access in renderers
-  const predictions = {};
-  for (const pred of groupPredictions) {
-    predictions[pred.match_id] = pred.prediction;
-  }
-  const tiebreaks = {};
-  for (const tb of tiebreakPredictions) {
-    tiebreaks[tb.group_letter] = tb.team_order;
-  }
-  const knockout_predictions = {};
-  for (const pred of knockoutPredictions) {
-    knockout_predictions[pred.match_number] = pred.winner_team_id;
-  }
-  const bonus = bonusPredictions[0] || {};
-
+  // Convert arrays to objects for picks view
   const all_predictions = {};
   for (const pred of allGroupPredictions) {
     if (!all_predictions[pred.user_id]) all_predictions[pred.user_id] = {};
