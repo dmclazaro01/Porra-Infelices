@@ -403,58 +403,58 @@ ON CONFLICT (id) DO NOTHING;
 -- Knockout stage match slots (M73–M104)
 -- Round of 32 (M73–M88, 16 matches)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M73',  NULL, 'R32', 'KNOCKOUT', 'M73',  '1A', '2D'),
-  ('M74',  NULL, 'R32', 'KNOCKOUT', 'M74',  '1B', '2C'),
-  ('M75',  NULL, 'R32', 'KNOCKOUT', 'M75',  '1C', '2B'),
-  ('M76',  NULL, 'R32', 'KNOCKOUT', 'M76',  '1D', '2A'),
-  ('M77',  NULL, 'R32', 'KNOCKOUT', 'M77',  '1E', '2H'),
-  ('M78',  NULL, 'R32', 'KNOCKOUT', 'M78',  '1F', '2E'),
-  ('M79',  NULL, 'R32', 'KNOCKOUT', 'M79',  '1G', '2F'),
-  ('M80',  NULL, 'R32', 'KNOCKOUT', 'M80',  '1H', '2G'),
-  ('M81',  NULL, 'R32', 'KNOCKOUT', 'M81',  '1I', '2L'),
-  ('M82',  NULL, 'R32', 'KNOCKOUT', 'M82',  '1J', '2I'),
-  ('M83',  NULL, 'R32', 'KNOCKOUT', 'M83',  '1K', '2J'),
-  ('M84',  NULL, 'R32', 'KNOCKOUT', 'M84',  '1L', '2K'),
-  ('M85',  NULL, 'R32', 'KNOCKOUT', 'M85',  '3ABC', '3DEF'),
-  ('M86',  NULL, 'R32', 'KNOCKOUT', 'M86',  '3GHI', '3JKL'),
-  ('M87',  NULL, 'R32', 'KNOCKOUT', 'M87',  '3ABCD', '3EFGH'),
-  ('M88',  NULL, 'R32', 'KNOCKOUT', 'M88',  '3IJKL', '3EFGH2')
+  ('M73',  NULL, 'R32', 'KNOCKOUT', 'M73',  '1A', '2D', 'scheduled'),
+  ('M74',  NULL, 'R32', 'KNOCKOUT', 'M74',  '1B', '2C', 'scheduled'),
+  ('M75',  NULL, 'R32', 'KNOCKOUT', 'M75',  '1C', '2B', 'scheduled'),
+  ('M76',  NULL, 'R32', 'KNOCKOUT', 'M76',  '1D', '2A', 'scheduled'),
+  ('M77',  NULL, 'R32', 'KNOCKOUT', 'M77',  '1E', '2H', 'scheduled'),
+  ('M78',  NULL, 'R32', 'KNOCKOUT', 'M78',  '1F', '2E', 'scheduled'),
+  ('M79',  NULL, 'R32', 'KNOCKOUT', 'M79',  '1G', '2F', 'scheduled'),
+  ('M80',  NULL, 'R32', 'KNOCKOUT', 'M80',  '1H', '2G', 'scheduled'),
+  ('M81',  NULL, 'R32', 'KNOCKOUT', 'M81',  '1I', '2L', 'scheduled'),
+  ('M82',  NULL, 'R32', 'KNOCKOUT', 'M82',  '1J', '2I', 'scheduled'),
+  ('M83',  NULL, 'R32', 'KNOCKOUT', 'M83',  '1K', '2J', 'scheduled'),
+  ('M84',  NULL, 'R32', 'KNOCKOUT', 'M84',  '1L', '2K', 'scheduled'),
+  ('M85',  NULL, 'R32', 'KNOCKOUT', 'M85',  '3ABC', '3DEF', 'scheduled'),
+  ('M86',  NULL, 'R32', 'KNOCKOUT', 'M86',  '3GHI', '3JKL', 'scheduled'),
+  ('M87',  NULL, 'R32', 'KNOCKOUT', 'M87',  '3ABCD', '3EFGH', 'scheduled'),
+  ('M88',  NULL, 'R32', 'KNOCKOUT', 'M88',  '3IJKL', '3EFGH2', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Round of 16 (M89–M96, 8 matches)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M89',  NULL, 'R16', 'KNOCKOUT', 'M89',  'WM73', 'WM74'),
-  ('M90',  NULL, 'R16', 'KNOCKOUT', 'M90',  'WM75', 'WM76'),
-  ('M91',  NULL, 'R16', 'KNOCKOUT', 'M91',  'WM77', 'WM78'),
-  ('M92',  NULL, 'R16', 'KNOCKOUT', 'M92',  'WM79', 'WM80'),
-  ('M93',  NULL, 'R16', 'KNOCKOUT', 'M93',  'WM81', 'WM82'),
-  ('M94',  NULL, 'R16', 'KNOCKOUT', 'M94',  'WM83', 'WM84'),
-  ('M95',  NULL, 'R16', 'KNOCKOUT', 'M95',  'WM85', 'WM86'),
-  ('M96',  NULL, 'R16', 'KNOCKOUT', 'M96',  'WM87', 'WM88')
+  ('M89',  NULL, 'R16', 'KNOCKOUT', 'M89',  'WM73', 'WM74', 'scheduled'),
+  ('M90',  NULL, 'R16', 'KNOCKOUT', 'M90',  'WM75', 'WM76', 'scheduled'),
+  ('M91',  NULL, 'R16', 'KNOCKOUT', 'M91',  'WM77', 'WM78', 'scheduled'),
+  ('M92',  NULL, 'R16', 'KNOCKOUT', 'M92',  'WM79', 'WM80', 'scheduled'),
+  ('M93',  NULL, 'R16', 'KNOCKOUT', 'M93',  'WM81', 'WM82', 'scheduled'),
+  ('M94',  NULL, 'R16', 'KNOCKOUT', 'M94',  'WM83', 'WM84', 'scheduled'),
+  ('M95',  NULL, 'R16', 'KNOCKOUT', 'M95',  'WM85', 'WM86', 'scheduled'),
+  ('M96',  NULL, 'R16', 'KNOCKOUT', 'M96',  'WM87', 'WM88', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Quarter-finals (M97–M100, 4 matches)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M97',  NULL, 'QF', 'KNOCKOUT', 'M97',  'WM89', 'WM90'),
-  ('M98',  NULL, 'QF', 'KNOCKOUT', 'M98',  'WM91', 'WM92'),
-  ('M99',  NULL, 'QF', 'KNOCKOUT', 'M99',  'WM93', 'WM94'),
-  ('M100', NULL, 'QF', 'KNOCKOUT', 'M100', 'WM95', 'WM96')
+  ('M97',  NULL, 'QF', 'KNOCKOUT', 'M97',  'WM89', 'WM90', 'scheduled'),
+  ('M98',  NULL, 'QF', 'KNOCKOUT', 'M98',  'WM91', 'WM92', 'scheduled'),
+  ('M99',  NULL, 'QF', 'KNOCKOUT', 'M99',  'WM93', 'WM94', 'scheduled'),
+  ('M100', NULL, 'QF', 'KNOCKOUT', 'M100', 'WM95', 'WM96', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Semi-finals (M101–M102, 2 matches)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M101', NULL, 'SF', 'KNOCKOUT', 'M101', 'WM97', 'WM98'),
-  ('M102', NULL, 'SF', 'KNOCKOUT', 'M102', 'WM99', 'WM100')
+  ('M101', NULL, 'SF', 'KNOCKOUT', 'M101', 'WM97', 'WM98', 'scheduled'),
+  ('M102', NULL, 'SF', 'KNOCKOUT', 'M102', 'WM99', 'WM100', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Third place (M103, 1 match)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M103', NULL, 'THIRD', 'KNOCKOUT', 'M103', 'LM101', 'LM102')
+  ('M103', NULL, 'THIRD', 'KNOCKOUT', 'M103', 'LM101', 'LM102', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Final (M104, 1 match)
 INSERT INTO public.matches (id, group_letter, round, stage, match_number, home_label, away_label, status) VALUES
-  ('M104', NULL, 'FINAL', 'KNOCKOUT', 'M104', 'WM101', 'WM102')
+  ('M104', NULL, 'FINAL', 'KNOCKOUT', 'M104', 'WM101', 'WM102', 'scheduled')
 ON CONFLICT (id) DO NOTHING;
 
 -- Settings seed
