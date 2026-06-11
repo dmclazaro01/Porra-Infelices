@@ -204,10 +204,8 @@ async function init() {
 }
 
 subscribe(() => {
-  // Only re-render on passive tabs to avoid interrupting user input
-  if (['results', 'leaderboard', 'picks'].includes(activeTab)) {
-    render();
-  }
+  // Re-render on all tabs to reflect state changes (logout, data updates, etc.)
+  render();
 });
 
 init();

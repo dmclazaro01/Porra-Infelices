@@ -10,7 +10,12 @@ export function getState() {
 }
 
 export async function load() {
-  state = await api.fetchState();
+  try {
+    state = await api.fetchState();
+  } catch (e) {
+    console.warn('Not authenticated, clearing state');
+    state = null;
+  }
   notifyListeners();
   scheduleLockRefresh();
   scheduleLiveRefresh();
