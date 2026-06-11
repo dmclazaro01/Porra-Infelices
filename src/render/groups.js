@@ -14,7 +14,7 @@ function debounceSavePrediction(matchId, prediction) {
   }, 300);
 }
 
-function handleTiebreakSwap(letter, standings, index, direction) {
+async function handleTiebreakSwap(letter, standings, index, direction) {
   if (!canEditPredictions()) return;
   const target = index + direction;
   if (target < 0 || target >= standings.length) return;
@@ -22,7 +22,12 @@ function handleTiebreakSwap(letter, standings, index, direction) {
   const order = standings.map(row => row.team_id);
   [order[index], order[target]] = [order[target], order[index]];
   tiebreaks[letter] = order;
-  saveTiebreak(letter, order);
+  try {
+    await saveTiebreak(letter, order);
+  } catch (e) {
+    console.error('Error saving tiebreak:', e);
+    alert('Error al guardar el desempate: ' + e.message);
+  }
   rebuild();
 }
 
@@ -32,7 +37,9 @@ function renderLockBanner() {
   const inactive = state.participant?.role === 'player' && !state.participant?.is_active;
   const right = el('div', { class: 'lock-banner-right' });
   if (canEditPredictions()) {
-    right.append(el('button', { class: 'force-save', text: '💾 Forzar guardado', onclick: forceSaveAll }));
+    const saveBtn = el('button', { class: 'force-save', text: '💾 Forzar guardado' });
+    saveBtn.addEventListener('click', () => forceSaveAll(saveBtn));
+    right.append(saveBtn);
   }
   right.append(el('span', { class: `badge ${canEditPredictions() ? 'open' : 'locked'}`, text: canEditPredictions() ? 'Editable' : 'Sin edición' }));
   return el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [
@@ -44,16 +51,37 @@ function renderLockBanner() {
   ]);
 }
 
-async function forceSaveAll() {
-  const state = getState();
-  const jobs = [];
-  for (const [matchId, pred] of Object.entries(predictions)) {
-    jobs.push(saveGroupPrediction(matchId, pred));
+async function forceSaveAll(btn) {
+  if (btn) {
+    btn.textContent = '⏳ Guardando...';
+    btn.disabled = true;
   }
-  for (const [letter, order] of Object.entries(tiebreaks)) {
-    jobs.push(saveTiebreak(letter, order));
+  try {
+    const jobs = [];
+    for (const [matchId, pred] of Object.entries(predictions)) {
+      jobs.push(saveGroupPrediction(matchId, pred));
+    }
+    for (const [letter, order] of Object.entries(tiebreaks)) {
+      jobs.push(saveTiebreak(letter, order));
+    }
+    await Promise.all(jobs);
+    if (btn) {
+      btn.textContent = '✓ Guardado';
+      setTimeout(() => {
+        btn.textContent = '💾 Forzar guardado';
+        btn.disabled = false;
+      }, 2000);
+    }
+  } catch (e) {
+    console.error('Error saving:', e);
+    if (btn) {
+      btn.textContent = '❌ Error: ' + e.message;
+      setTimeout(() => {
+        btn.textContent = '💾 Forzar guardado';
+        btn.disabled = false;
+      }, 3000);
+    }
   }
-  await Promise.all(jobs);
 }
 
 function renderMatchRow(match) {

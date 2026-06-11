@@ -10,7 +10,15 @@ export function getState() {
 }
 
 export async function load() {
-  state = await api.fetchState();
+  try {
+    state = await api.fetchState();
+  } catch (e) {
+    if (e.message === 'Not authenticated') {
+      state = null;
+    } else {
+      throw e;
+    }
+  }
   notifyListeners();
   scheduleLockRefresh();
   scheduleLiveRefresh();
@@ -40,7 +48,8 @@ export function isAdmin() {
 
 export function canEditPredictions() {
   if (!state) return false;
-  return state.profile.role === 'player' && state.profile.is_active && !isLocked();
+  // Both player and admin can edit predictions as long as they are active and the pool is not locked
+  return state.profile.is_active && !isLocked();
 }
 
 function notifyListeners() {

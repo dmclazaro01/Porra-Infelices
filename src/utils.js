@@ -48,6 +48,35 @@ export function teamFlag(teamId) {
   return team ? (team.flag || '') : '';
 }
 
+function getFlagImg(team) {
+  if (team.flag) {
+    return el('span', { class: 'team-flag-emoji' }, [team.flag]);
+  }
+  const code = team.code ? team.code.toLowerCase() : '';
+  if (!code) return null;
+  // Map some non-standard codes to ISO country codes
+  const codeMap = {
+    'kor': 'kr', 'cze': 'cz', 'rsa': 'za', 'bih': 'ba', 'qat': 'qa',
+    'sui': 'ch', 'hai': 'ht', 'sco': 'gb-sct', 'usa': 'us', 'par': 'py',
+    'aus': 'au', 'tur': 'tr', 'cuw': 'cw', 'civ': 'ci', 'ecu': 'ec',
+    'ned': 'nl', 'jpn': 'jp', 'swe': 'se', 'tun': 'tn', 'egy': 'eg',
+    'irn': 'ir', 'nzl': 'nz', 'cpv': 'cv', 'ksa': 'sa', 'uru': 'uy',
+    'fra': 'fr', 'sen': 'sn', 'irq': 'iq', 'nor': 'no', 'arg': 'ar',
+    'alg': 'dz', 'aut': 'at', 'jor': 'jo', 'por': 'pt', 'cod': 'cd',
+    'uzb': 'uz', 'col': 'co', 'eng': 'gb-eng', 'cro': 'hr', 'gha': 'gh',
+    'pan': 'pa', 'ger': 'de', 'esp': 'es', 'bra': 'br', 'mex': 'mx',
+    'bel': 'be', 'mar': 'ma', 'can': 'ca',
+  };
+  const isoCode = codeMap[code] || code;
+  const img = el('img', {
+    class: 'team-flag-img',
+    src: `https://flagcdn.com/24x18/${isoCode}.png`,
+    alt: team.name,
+    loading: 'lazy',
+  });
+  return img;
+}
+
 export function teamInline(teamId, fallback = '', options = {}) {
   const state = getState();
   if (!state) {
@@ -58,10 +87,11 @@ export function teamInline(teamId, fallback = '', options = {}) {
     return el('span', { class: 'team-inline' }, [fallback || 'TBD']);
   }
   const name = options.full ? team.name : (team.code || team.name);
-  return el('span', { class: 'team-inline' }, [
-    team.flag ? `${team.flag} ` : '',
-    name,
-  ]);
+  const flag = getFlagImg(team);
+  const children = [];
+  if (flag) children.push(flag, ' ');
+  children.push(name);
+  return el('span', { class: 'team-inline' }, children);
 }
 
 export function teamBlock(teamId, side) {
@@ -73,8 +103,9 @@ export function teamBlock(teamId, side) {
       el('span', { class: 'team-name' }, ['TBD']),
     ]);
   }
+  const flag = getFlagImg(team);
   return el('div', { class: `team-block ${side}` }, [
-    el('span', { class: 'team-flag' }, [team.flag || '']),
+    flag || el('span', { class: 'team-flag' }, ['']),
     el('span', { class: 'team-name' }, [team.name]),
   ]);
 }

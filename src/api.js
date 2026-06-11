@@ -133,7 +133,47 @@ export async function fetchState() {
     [allGroupPredictions, allTiebreakPredictions, allKnockoutPredictions, allBonusPredictions] = allPreds;
   }
 
+  // Convert arrays to objects for easier access in renderers
+  const predictions = {};
+  for (const pred of groupPredictions) {
+    predictions[pred.match_id] = pred.prediction;
+  }
+  const tiebreaks = {};
+  for (const tb of tiebreakPredictions) {
+    tiebreaks[tb.group_letter] = tb.team_order;
+  }
+  const knockout_predictions = {};
+  for (const pred of knockoutPredictions) {
+    knockout_predictions[pred.match_number] = pred.winner_team_id;
+  }
+  const bonus = bonusPredictions[0] || {};
+
+  const all_predictions = {};
+  for (const pred of allGroupPredictions) {
+    if (!all_predictions[pred.user_id]) all_predictions[pred.user_id] = {};
+    all_predictions[pred.user_id][pred.match_id] = pred.prediction;
+  }
+  const all_tiebreaks = {};
+  for (const tb of allTiebreakPredictions) {
+    if (!all_tiebreaks[tb.user_id]) all_tiebreaks[tb.user_id] = {};
+    all_tiebreaks[tb.user_id][tb.group_letter] = tb.team_order;
+  }
+  const all_knockout = {};
+  for (const pred of allKnockoutPredictions) {
+    if (!all_knockout[pred.user_id]) all_knockout[pred.user_id] = {};
+    all_knockout[pred.user_id][pred.match_number] = pred.winner_team_id;
+  }
+  const all_bonus = {};
+  for (const pred of allBonusPredictions) {
+    all_bonus[pred.user_id] = { top_scorer: pred.top_scorer, best_player: pred.best_player };
+  }
+
   const allProfiles = await getAllProfiles();
+
+  const all_profiles_map = {};
+  for (const p of allProfiles) {
+    all_profiles_map[p.id] = p;
+  }
 
   let leaderboard = [];
   if (isLocked || isAdmin) {
@@ -161,13 +201,21 @@ export async function fetchState() {
 
   return {
     profile,
+    participant: profile,
     playerGroups,
     teams,
+    groups: groupsT,
     groupsT,
     matches,
     settings,
     syncLog,
     bonusAnswers,
+    // Object versions for renderers
+    predictions,
+    tiebreaks,
+    knockout_predictions,
+    bonus,
+    // Array versions for scoring
     groupPredictions,
     tiebreakPredictions,
     knockoutPredictions,
@@ -176,6 +224,12 @@ export async function fetchState() {
     allTiebreakPredictions: (isLocked || isAdmin) ? allTiebreakPredictions : [],
     allKnockoutPredictions: (isLocked || isAdmin) ? allKnockoutPredictions : [],
     allBonusPredictions: (isLocked || isAdmin) ? allBonusPredictions : [],
+    // Object versions for picks view
+    public_predictions: all_predictions,
+    public_tiebreaks: all_tiebreaks,
+    public_knockout: all_knockout,
+    public_bonus: all_bonus,
+    all_profiles: all_profiles_map,
     allProfiles,
     leaderboard,
   };

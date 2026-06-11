@@ -35,10 +35,28 @@ function renderLockBanner() {
   const locked = isLocked();
   const right = el('div', { class: 'lock-banner-right' });
   if (canEditPredictions()) {
-    right.append(el('button', { class: 'force-save', text: '💾 Forzar guardado', onclick: async () => {
-      const jobs = Object.entries(knockoutPredictions).map(([mn, wid]) => saveKnockoutPrediction(mn, wid));
-      await Promise.all(jobs);
-    }}));
+    const saveBtn = el('button', { class: 'force-save', text: '💾 Forzar guardado' });
+    saveBtn.addEventListener('click', async () => {
+      saveBtn.textContent = '⏳ Guardando...';
+      saveBtn.disabled = true;
+      try {
+        const jobs = Object.entries(knockoutPredictions).map(([mn, wid]) => saveKnockoutPrediction(mn, wid));
+        await Promise.all(jobs);
+        saveBtn.textContent = '✓ Guardado';
+        setTimeout(() => {
+          saveBtn.textContent = '💾 Forzar guardado';
+          saveBtn.disabled = false;
+        }, 2000);
+      } catch (e) {
+        console.error('Error saving knockout:', e);
+        saveBtn.textContent = '❌ Error: ' + e.message;
+        setTimeout(() => {
+          saveBtn.textContent = '💾 Forzar guardado';
+          saveBtn.disabled = false;
+        }, 3000);
+      }
+    });
+    right.append(saveBtn);
   }
   right.append(el('span', { class: `badge ${canEditPredictions() ? 'open' : 'locked'}`, text: canEditPredictions() ? 'Editable' : 'Sin edición' }));
   return el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [

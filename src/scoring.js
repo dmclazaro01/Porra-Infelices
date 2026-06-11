@@ -37,8 +37,14 @@ function updateTeamStats(home, away, homeGoals, awayGoals) {
 }
 
 function sortWithTiebreak(standings, groupLetter, userTiebreaks) {
-  const tiebreakOrder =
-    userTiebreaks && userTiebreaks[groupLetter] ? userTiebreaks[groupLetter] : null;
+  let tiebreakOrder = null;
+  if (Array.isArray(userTiebreaks)) {
+    // userTiebreaks is an array directly (e.g., from tiebreaks[groupLetter])
+    tiebreakOrder = userTiebreaks;
+  } else if (userTiebreaks && userTiebreaks[groupLetter]) {
+    // userTiebreaks is an object with group letters as keys
+    tiebreakOrder = userTiebreaks[groupLetter];
+  }
 
   standings.sort((a, b) => {
     if (a.points !== b.points) return b.points - a.points;

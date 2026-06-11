@@ -19,7 +19,7 @@ const app = document.getElementById('app');
 function render() {
   app.textContent = '';
   const state = getState();
-  if (!state.profile) {
+  if (!state || !state.profile) {
     renderLoginScreen();
     return;
   }
@@ -62,7 +62,8 @@ function renderLoginScreen() {
 
   const copy = document.createElement('p');
   copy.className = 'login-copy';
-  copy.textContent = `Cierre ${state.settings?.lock_deadline ? new Date(state.settings.lock_deadline).toLocaleString('es-ES') : 'No definido'} · 48 selecciones · un bote · una gloria`;
+  const deadline = state?.settings?.lock_deadline;
+  copy.textContent = `Cierre ${deadline ? new Date(deadline).toLocaleString('es-ES') : 'No definido'} · 48 selecciones · un bote · una gloria`;
   panel.append(copy);
 
   const form = document.createElement('form');
@@ -173,7 +174,7 @@ function renderTabs() {
   tabs.className = 'tabs';
   const items = [];
   if (!isAdmin()) {
-    items.push(['groups', 'Grupos'], ['knockout', 'Eliminatorias'], ['bonus', '🏅 Bonus']);
+    items.push(['groups', 'Grupos'], ['bonus', '🏅 Bonus']);
   }
   items.push(['results', '⚽ Resultados']);
   items.push(['leaderboard', 'Clasificación']);
