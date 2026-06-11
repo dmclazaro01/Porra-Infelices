@@ -87,7 +87,7 @@ export async function fetchState() {
   const [playerGroups, teams, groupsT, matches, settings, syncLog, bonusAnswers] = await Promise.all([
     supabase.from('player_groups').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('teams').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
-    supabase.from('groups_t').select('*, teams:groups_t_teams(*)').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('groups_t').select('*').then(r => { if (r.error) throw r.error; return r.data.map(g => ({ ...g, teams: (g.team_ids || []).map(tid => ({ team_id: tid })) })); }),
     supabase.from('matches').select('*').order('match_number').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('settings').select('*').single().then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('sync_log').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
