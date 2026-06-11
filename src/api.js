@@ -1,0 +1,333 @@
+import { createClient } from '@supabase/supabase-js';
+import { computeTotalPoints } from './scoring.js';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+let supabase = null;
+
+export function initSupabase() {
+  if (supabase) return supabase;
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabase;
+}
+
+export async function login(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function logout() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+export async function getCurrentUser() {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (!session) return null;
+  return session.user;
+}
+
+export function onAuthChange(callback) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user ?? null, session);
+  });
+  return subscription;
+}
+
+export async function getProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfile(userId, updates) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllProfiles() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*');
+  if (error) throw error;
+  return data;
+}
+
+export async function joinGroup(userId, groupName) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ group_name: groupName })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchState() {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const profile = await getProfile(user.id);
+  const isAdmin = profile.role === 'admin';
+
+  const [playerGroups, teams, groupsT, matches, settings, syncLog, bonusAnswers] = await Promise.all([
+    supabase.from('player_groups').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('teams').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('groups_t').select('*, teams:groups_t_teams(*)').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('matches').select('*').order('match_number').then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('settings').select('*').single().then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('sync_log').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('bonus_answers').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
+  ]);
+
+  const isLocked = settings.locked;
+
+  let groupPredictions = [];
+  let tiebreakPredictions = [];
+  let knockoutPredictions = [];
+  let bonusPredictions = [];
+  let allGroupPredictions = [];
+  let allTiebreakPredictions = [];
+  let allKnockoutPredictions = [];
+  let allBonusPredictions = [];
+
+  if (!isLocked || isAdmin) {
+    const ownPreds = Promise.all([
+      supabase.from('group_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('tiebreak_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('knockout_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('bonus_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+    ]);
+    [groupPredictions, tiebreakPredictions, knockoutPredictions, bonusPredictions] = await ownPreds;
+  } else {
+    const ownPreds = await Promise.all([
+      supabase.from('group_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('tiebreak_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('knockout_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('bonus_predictions').select('*').eq('user_id', user.id).then(r => { if (r.error) throw r.error; return r.data; }),
+    ]);
+    [groupPredictions, tiebreakPredictions, knockoutPredictions, bonusPredictions] = ownPreds;
+  }
+
+  if (isLocked || isAdmin) {
+    const allPreds = await Promise.all([
+      supabase.from('group_predictions').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('tiebreak_predictions').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('knockout_predictions').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+      supabase.from('bonus_predictions').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
+    ]);
+    [allGroupPredictions, allTiebreakPredictions, allKnockoutPredictions, allBonusPredictions] = allPreds;
+  }
+
+  const allProfiles = await getAllProfiles();
+
+  let leaderboard = [];
+  if (isLocked || isAdmin) {
+    const activePlayers = allProfiles.filter(p => p.is_active);
+    leaderboard = activePlayers.map(player => {
+      const total = computeTotalPoints(player.id, {
+        allGroupPredictions,
+        allTiebreakPredictions,
+        allKnockoutPredictions,
+        allBonusPredictions,
+        matches,
+        bonusAnswers,
+        groupsT,
+        teams,
+      });
+      return {
+        id: player.id,
+        name: player.name,
+        group_name: player.group_name,
+        has_paid: player.has_paid,
+        points: total,
+      };
+    }).sort((a, b) => b.points - a.points);
+  }
+
+  return {
+    profile,
+    playerGroups,
+    teams,
+    groupsT,
+    matches,
+    settings,
+    syncLog,
+    bonusAnswers,
+    groupPredictions,
+    tiebreakPredictions,
+    knockoutPredictions,
+    bonusPredictions,
+    allGroupPredictions: (isLocked || isAdmin) ? allGroupPredictions : [],
+    allTiebreakPredictions: (isLocked || isAdmin) ? allTiebreakPredictions : [],
+    allKnockoutPredictions: (isLocked || isAdmin) ? allKnockoutPredictions : [],
+    allBonusPredictions: (isLocked || isAdmin) ? allBonusPredictions : [],
+    allProfiles,
+    leaderboard,
+  };
+}
+
+export async function saveGroupPrediction(matchId, prediction) {
+  const user = await getCurrentUser();
+  const { data, error } = await supabase
+    .from('group_predictions')
+    .upsert({
+      user_id: user.id,
+      match_id: matchId,
+      prediction,
+    }, { onConflict: 'user_id,match_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function saveTiebreak(groupLetter, teamOrder) {
+  const user = await getCurrentUser();
+  const { data, error } = await supabase
+    .from('tiebreak_predictions')
+    .upsert({
+      user_id: user.id,
+      group_letter: groupLetter,
+      team_order: teamOrder,
+    }, { onConflict: 'user_id,group_letter' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function saveKnockoutPrediction(matchNumber, winnerTeamId) {
+  const user = await getCurrentUser();
+  const { data, error } = await supabase
+    .from('knockout_predictions')
+    .upsert({
+      user_id: user.id,
+      match_number: matchNumber,
+      winner_team_id: winnerTeamId,
+    }, { onConflict: 'user_id,match_number' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function saveBonus(topScorer, bestPlayer) {
+  const user = await getCurrentUser();
+  const { data, error } = await supabase
+    .from('bonus_predictions')
+    .upsert({
+      user_id: user.id,
+      top_scorer: topScorer,
+      best_player: bestPlayer,
+    }, { onConflict: 'user_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminUpdateMatch(matchId, data) {
+  const { data: result, error } = await supabase
+    .from('matches')
+    .update(data)
+    .eq('id', matchId)
+    .select()
+    .single();
+  if (error) throw error;
+  return result;
+}
+
+export async function adminTogglePaid(userId) {
+  const profile = await getProfile(userId);
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ has_paid: !profile.has_paid })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminToggleActive(userId) {
+  const profile = await getProfile(userId);
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ is_active: !profile.is_active })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminCreateGroup(name) {
+  const { data, error } = await supabase
+    .from('player_groups')
+    .insert({ name })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminUpdateSettings(updates) {
+  const { data, error } = await supabase
+    .from('settings')
+    .update(updates)
+    .eq('id', 1)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminUpdateBonusAnswers(topScorer, bestPlayer) {
+  const { data, error } = await supabase
+    .from('bonus_answers')
+    .upsert({
+      id: 1,
+      top_scorer: topScorer,
+      best_player: bestPlayer,
+    }, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminCreatePlayer(email, password, name) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { name } },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function adminSetRole(userId, role) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ role })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}

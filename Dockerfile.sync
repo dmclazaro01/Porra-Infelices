@@ -1,0 +1,7 @@
+FROM denoland/deno:alpine
+WORKDIR /app
+COPY supabase/functions/sync-results/index.ts .
+ENV SUPABASE_URL=""
+ENV SUPABASE_SERVICE_ROLE_KEY=""
+ENV FOOTBALL_DATA_API_TOKEN=""
+CMD ["deno", "run", "--allow-net", "--allow-env", "index.ts"]

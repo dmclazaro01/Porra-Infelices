@@ -1,0 +1,212 @@
+import { el, teamInline, formatPoints, groupMatches } from '../utils.js';
+import { getState, canEditPredictions, isLocked } from '../state.js';
+import { saveGroupPrediction, saveTiebreak } from '../api.js';
+import { computeGroupStandings } from '../scoring.js';
+
+let predictions = {};
+let tiebreaks = {};
+let saveTimers = {};
+
+function debounceSavePrediction(matchId, prediction) {
+  clearTimeout(saveTimers[`pred-${matchId}`]);
+  saveTimers[`pred-${matchId}`] = setTimeout(() => {
+    saveGroupPrediction(matchId, prediction);
+  }, 300);
+}
+
+function handleTiebreakSwap(letter, standings, index, direction) {
+  if (!canEditPredictions()) return;
+  const target = index + direction;
+  if (target < 0 || target >= standings.length) return;
+  if (standings[index].points !== standings[target].points) return;
+  const order = standings.map(row => row.team_id);
+  [order[index], order[target]] = [order[target], order[index]];
+  tiebreaks[letter] = order;
+  saveTiebreak(letter, order);
+  rebuild();
+}
+
+function renderLockBanner() {
+  const locked = isLocked();
+  const state = getState();
+  const inactive = state.participant?.role === 'player' && !state.participant?.is_active;
+  const right = el('div', { class: 'lock-banner-right' });
+  if (canEditPredictions()) {
+    right.append(el('button', { class: 'force-save', text: '💾 Forzar guardado', onclick: forceSaveAll }));
+  }
+  right.append(el('span', { class: `badge ${canEditPredictions() ? 'open' : 'locked'}`, text: canEditPredictions() ? 'Editable' : 'Sin edición' }));
+  return el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [
+    el('div', {}, [
+      el('strong', { text: inactive ? 'Jugador no activo' : locked ? 'Porra cerrada' : 'Porra abierta' }),
+      el('span', { text: locked ? 'Lo guardado queda fijo.' : `Bloqueo: ${state.settings?.lock_deadline ? new Date(state.settings.lock_deadline).toLocaleString('es-ES') : 'No definido'}` }),
+    ]),
+    right,
+  ]);
+}
+
+async function forceSaveAll() {
+  const state = getState();
+  const jobs = [];
+  for (const [matchId, pred] of Object.entries(predictions)) {
+    jobs.push(saveGroupPrediction(matchId, pred));
+  }
+  for (const [letter, order] of Object.entries(tiebreaks)) {
+    jobs.push(saveTiebreak(letter, order));
+  }
+  await Promise.all(jobs);
+}
+
+function renderMatchRow(match) {
+  const editable = canEditPredictions();
+  const pred = predictions[match.id] || null;
+  const row = el('div', { class: 'match-row' });
+  row.append(el('div', { class: 'team-block right' }, [teamInline(match.home_team_id, match.home_label || 'TBD')]));
+  const middle = el('div', { class: 'match-middle' });
+  const choices = el('div', { class: 'choices' });
+  ['1', 'X', '2'].forEach(outcome => {
+    const oddsMap = { '1': match.odds_home_decimal, 'X': match.odds_draw_decimal, '2': match.odds_away_decimal };
+    const odds = oddsMap[outcome];
+    const btn = el('button', {
+      class: `choice ${pred === outcome ? 'active' : ''}`,
+      disabled: !editable ? 'disabled' : null,
+      onclick: () => {
+        if (!editable) return;
+        predictions[match.id] = outcome;
+        debounceSavePrediction(match.id, outcome);
+        rebuild();
+      }
+    }, [
+      el('span', { class: 'choice-sign', text: outcome }),
+      el('small', { class: 'choice-odds', text: odds ? formatPoints(Number(odds)) : '·' }),
+    ]);
+    choices.append(btn);
+  });
+  middle.append(choices);
+  if (match.kickoff_at) {
+    middle.append(el('div', { class: 'match-time', text: new Date(match.kickoff_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }));
+  }
+  row.append(middle);
+  row.append(el('div', { class: 'team-block left' }, [teamInline(match.away_team_id, match.away_label || 'TBD')]));
+  return row;
+}
+
+function renderStandings(standings, letter) {
+  const editable = canEditPredictions();
+  const tieRows = new Set();
+  standings.forEach((row, i) => {
+    if (i > 0 && row.points === standings[i - 1].points) {
+      tieRows.add(standings[i - 1].team_id);
+      tieRows.add(row.team_id);
+    }
+  });
+  const showArrows = tieRows.size > 0 && editable;
+  const table = el('table', { class: 'standings' });
+  const thead = el('thead');
+  const headers = ['#', 'Equipo', 'Pts', 'PJ', 'G', 'E', 'P'];
+  if (showArrows) headers.push('');
+  thead.append(el('tr', {}, headers.map(h => el('th', { text: h }))));
+  table.append(thead);
+  const tbody = el('tbody');
+  standings.forEach((row, index) => {
+    const rowClass = row.position <= 2 ? 'qualified' : row.position === 3 ? 'third-place' : '';
+    const isTied = tieRows.has(row.team_id);
+    const cells = [
+      el('td', { text: String(row.position) }),
+      el('td', {}, [teamInline(row.team_id)]),
+      el('td', { text: String(row.points) }),
+      el('td', { text: String(row.played) }),
+      el('td', { text: String(row.won) }),
+      el('td', { text: String(row.drawn) }),
+      el('td', { text: String(row.lost) }),
+    ];
+    if (showArrows) {
+      const arrows = el('td', { class: 'tie-arrows' });
+      if (isTied) {
+        if (index > 0 && standings[index - 1].points === row.points) {
+          arrows.append(el('button', { class: 'tie-btn', text: '▲', onclick: () => handleTiebreakSwap(letter, standings, index, -1) }));
+        }
+        if (index < standings.length - 1 && standings[index + 1].points === row.points) {
+          arrows.append(el('button', { class: 'tie-btn', text: '▼', onclick: () => handleTiebreakSwap(letter, standings, index, 1) }));
+        }
+      }
+      cells.push(arrows);
+    }
+    tbody.append(el('tr', { class: `${rowClass} ${isTied ? 'tied-row' : ''}` }, cells));
+  });
+  table.append(tbody);
+  return table;
+}
+
+let container = null;
+
+function rebuild() {
+  if (!container) return;
+  container.textContent = '';
+  container.append(buildContent());
+}
+
+function buildContent() {
+  const state = getState();
+  const fragment = document.createDocumentFragment();
+  fragment.append(renderLockBanner());
+  const heading = el('div', { class: 'section-heading' }, [
+    el('div', {}, [
+      el('h2', { text: 'Fase de grupos' }),
+      el('p', { text: 'Formato 1-X-2 con clasificación calculada al momento.' }),
+    ]),
+  ]);
+  fragment.append(heading);
+  const hasKnockout = Object.keys(state.knockout_predictions || {}).length > 0;
+  if (canEditPredictions() && hasKnockout) {
+    fragment.append(el('div', { class: 'ko-disclaimer' }, [
+      el('strong', { text: '⚠ AVISO: ' }),
+      el('span', { text: 'Ya tienes la eliminatoria rellena. Cualquier cambio aquí recalcula los cruces.' }),
+    ]));
+  }
+  const grid = el('div', { class: 'group-grid' });
+  for (const group of state.groups) {
+    grid.append(renderGroup(group));
+  }
+  fragment.append(grid);
+  return fragment;
+}
+
+function renderGroup(group) {
+  const matches = groupMatches(getState(), group.letter);
+  const standings = computeGroupStandings(group.letter, matches, predictions, tiebreaks[group.letter]);
+  const completed = matches.filter(m => predictions[m.id]).length;
+  const panel = el('article', { class: `panel group-card group-${group.letter}`, 'data-group': group.letter });
+
+  const strip = el('div', { class: 'group-strip' });
+  (group.team_ids || []).forEach(tid => strip.append(teamInline(tid, '', { full: true })));
+  panel.append(el('div', { class: 'panel-head' }, [
+    el('div', {}, [
+      el('div', { class: 'panel-title', text: `Grupo ${group.letter}` }),
+      strip,
+    ]),
+    el('span', { class: 'badge', text: `${completed}/6` }),
+  ]));
+
+  for (const match of matches) {
+    panel.append(renderMatchRow(match));
+  }
+
+  panel.append(renderStandings(standings, group.letter));
+
+  if (standings.some((row, i) => i > 0 && row.points === standings[i - 1].points)) {
+    panel.append(el('div', { class: 'tie-notice' }, [
+      el('strong', { text: '⚠ Empate a puntos. ' }),
+      el('span', { text: canEditPredictions() ? 'Usa ▲▼ para decidir el orden.' : 'Orden según desempate guardado.' }),
+    ]));
+  }
+  return panel;
+}
+
+export function renderGroups() {
+  const state = getState();
+  predictions = { ...(state.predictions || {}) };
+  tiebreaks = { ...(state.tiebreaks || {}) };
+  container = el('section', { class: 'phase-section' });
+  container.append(buildContent());
+  return container;
+}
