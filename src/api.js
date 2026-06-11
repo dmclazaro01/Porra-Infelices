@@ -311,13 +311,20 @@ export async function adminUpdateBonusAnswers(topScorer, bestPlayer) {
   return data;
 }
 
-export async function adminCreatePlayer(email, password, name) {
+export async function adminCreatePlayer(email, password, name, groupName) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { name } },
   });
   if (error) throw error;
+  if (groupName && data?.user?.id) {
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ group_name: groupName })
+      .eq('id', data.user.id);
+    if (updateError) throw updateError;
+  }
   return data;
 }
 
