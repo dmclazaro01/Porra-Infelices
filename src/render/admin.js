@@ -1,5 +1,5 @@
 import { el, formatDate, groupChip, formatMoney, paymentPill } from '../utils.js';
-import { getState } from '../state.js';
+import { getState, load } from '../state.js';
 import * as api from '../api.js';
 
 export function renderAdmin() {
@@ -249,6 +249,7 @@ function renderSettingsPanel(state) {
         locked: lockedCheck.checked,
         entry_fee_cents: Math.round(Number(feeInput.value) * 100),
       });
+      await load();
     },
   });
 

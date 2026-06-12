@@ -10,6 +10,8 @@ export function el(tag, attrs = {}, children = []) {
       node.textContent = val;
     } else if (key.startsWith('on')) {
       node.addEventListener(key.slice(2).toLowerCase(), val);
+    } else if (key === 'checked' || key === 'disabled' || key === 'readOnly') {
+      node[key] = val;
     } else {
       node.setAttribute(key, val);
     }
