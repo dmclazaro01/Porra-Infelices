@@ -116,12 +116,12 @@ function renderPlayerManagement(state) {
     actions.append(el('button', {
       class: 'small-action',
       text: player.is_active ? 'Desactivar' : 'Activar',
-      onclick: async () => { await api.adminToggleActive(player.id); },
+      onclick: async () => { await api.adminToggleActive(player.id); await load(); },
     }));
     actions.append(el('button', {
       class: `small-action ${player.has_paid ? 'pay-action' : ''}`,
       text: player.has_paid ? '✓ Pagado' : 'Pendiente',
-      onclick: async () => { await api.adminTogglePaid(player.id); },
+      onclick: async () => { await api.adminTogglePaid(player.id); await load(); },
     }));
     tbody.append(el('tr', {}, [
       el('td', { text: player.name }),
@@ -217,6 +217,11 @@ function renderAdminMatchRow(match) {
   return row;
 }
 
+function toLocalDatetimeString(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function renderSettingsPanel(state) {
   const panel = el('article', { class: 'panel' });
   panel.append(el('div', { class: 'panel-head' }, [
@@ -227,7 +232,7 @@ function renderSettingsPanel(state) {
 
   const deadlineInput = el('input', {
     type: 'datetime-local',
-    value: settings.lock_deadline ? new Date(settings.lock_deadline).toISOString().slice(0, 16) : '',
+    value: settings.lock_deadline ? toLocalDatetimeString(new Date(settings.lock_deadline)) : '',
   });
   const feeInput = el('input', {
     type: 'number',
