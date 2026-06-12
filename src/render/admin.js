@@ -306,9 +306,11 @@ function renderSyncPanel(state) {
       syncBtn.textContent = 'Sincronizando...';
       syncBtn.disabled = true;
       try {
+        const token = await api.getSessionToken();
+        if (!token) throw new Error('No session');
         const { data } = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-results`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         syncBtn.textContent = '✓ Sincronizado';
         setTimeout(() => { syncBtn.textContent = '🔄 Sincronizar resultados'; syncBtn.disabled = false; }, 3000);

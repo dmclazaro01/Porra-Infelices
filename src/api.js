@@ -30,6 +30,12 @@ export async function getCurrentUser() {
   return session.user;
 }
 
+export async function getSessionToken() {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return session?.access_token ?? null;
+}
+
 export function onAuthChange(callback) {
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
     callback(session?.user ?? null, session);

@@ -1,4 +1,4 @@
-import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange, getCurrentUser } from './api.js';
+import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange, getCurrentUser, getSessionToken } from './api.js';
 import { getState, load, isLocked, isAdmin, canEditPredictions, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
 import { renderLogin, renderGroupChoice } from './render/login.js';
 import { renderTopbar } from './render/topbar.js';
@@ -205,11 +205,12 @@ async function autoSyncIfStale() {
     if (elapsed < SYNC_INTERVAL_MS) return;
   }
   try {
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const token = await getSessionToken();
+    if (!token) return;
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     await fetch(`${supabaseUrl}/functions/v1/sync-results`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${anonKey}` },
+      headers: { 'Authorization': `Bearer ${token}` },
     });
     await load();
   } catch (e) {
