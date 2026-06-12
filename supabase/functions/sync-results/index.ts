@@ -3,25 +3,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const API_BASE = 'https://worldcup26.ir';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
 Deno.serve(async (req) => {
   if (!SUPABASE_SERVICE_KEY) {
     return new Response(JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // Validate caller's JWT — only authenticated users may trigger sync
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Missing or invalid Authorization header' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  const jwt = authHeader.slice(7);
-  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY || '');
-  const { data: { user }, error: userError } = await authClient.auth.getUser(jwt);
-  if (userError || !user) {
-    return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-  }
+  // JWT verification is handled by Supabase (verify_jwt: true)
+  // Only authenticated users can call this function
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
