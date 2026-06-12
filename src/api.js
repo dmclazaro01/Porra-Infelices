@@ -176,8 +176,13 @@ export async function fetchState() {
 
       const groupDetails = [];
       const userPreds = all_predictions[uid] || {};
-      for (const match of matches) {
-        if (!match.group_letter) continue;
+      const groupMatches = matches.filter(m => m.group_letter).sort((a, b) => {
+        if (a.kickoff_at && b.kickoff_at) return new Date(a.kickoff_at) - new Date(b.kickoff_at);
+        if (a.kickoff_at) return -1;
+        if (b.kickoff_at) return 1;
+        return 0;
+      });
+      for (const match of groupMatches) {
         const predicted = userPreds[match.id];
         let status = 'missing', points = 0;
         let realResult = null;

@@ -53,7 +53,12 @@ function renderResultRow(match, options = {}) {
 
 function renderResultGroup(group, state) {
   const matches = state.matches.filter(m => m.group_letter === group.letter && m.stage === 'GROUP')
-    .sort((a, b) => (a.kickoff_at || a.id).localeCompare(b.kickoff_at || b.id));
+    .sort((a, b) => {
+      if (a.kickoff_at && b.kickoff_at) return new Date(a.kickoff_at) - new Date(b.kickoff_at);
+      if (a.kickoff_at) return -1;
+      if (b.kickoff_at) return 1;
+      return (a.match_number || '').localeCompare(b.match_number || '');
+    });
   const finals = matches.filter(m => m.status === 'finished' || m.actual_home_score !== null);
   const panel = el('article', { class: `panel group-card group-${group.letter}` });
   panel.append(el('div', { class: 'panel-head' }, [

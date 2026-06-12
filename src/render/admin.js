@@ -160,7 +160,12 @@ function renderMatchResults(state) {
     panel.append(el('h3', { class: 'results-block-title', text: 'Fase de grupos' }));
     const groupGrid = el('div', { class: 'group-grid' });
     for (const group of state.groups) {
-      const matchedGroup = groupMatches.filter(m => m.group_letter === group.letter);
+      const matchedGroup = groupMatches.filter(m => m.group_letter === group.letter).sort((a, b) => {
+        if (a.kickoff_at && b.kickoff_at) return new Date(a.kickoff_at) - new Date(b.kickoff_at);
+        if (a.kickoff_at) return -1;
+        if (b.kickoff_at) return 1;
+        return 0;
+      });
       const gPanel = el('article', { class: `panel group-card group-${group.letter}` });
       gPanel.append(el('div', { class: 'panel-head' }, [
         el('div', { class: 'panel-title', text: `Grupo ${group.letter}` }),

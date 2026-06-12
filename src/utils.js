@@ -170,7 +170,14 @@ export function debounce(fn, ms) {
 
 export function groupMatches(state, letter) {
   if (!state || !state.matches) return [];
-  return state.matches.filter(m => m.group === letter || m.group_letter === letter);
+  return state.matches
+    .filter(m => m.group === letter || m.group_letter === letter)
+    .sort((a, b) => {
+      if (a.kickoff_at && b.kickoff_at) return new Date(a.kickoff_at) - new Date(b.kickoff_at);
+      if (a.kickoff_at) return -1;
+      if (b.kickoff_at) return 1;
+      return 0;
+    });
 }
 
 export function roundLabel(round) {
