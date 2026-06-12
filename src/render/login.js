@@ -27,7 +27,7 @@ export function renderLogin(state) {
   const errorDiv = el('div', { class: 'error', id: 'login-error' });
 
   const form = el('form', { class: 'login-form' }, [
-    field('Usuario', el('input', { type: 'text', name: 'email', required: '', autocomplete: 'username', placeholder: 'tu.usuario' })),
+    field('Usuario', el('input', { type: 'text', name: 'username', required: '', autocomplete: 'username', placeholder: 'tu.usuario' })),
     field('Contraseña', el('input', { type: 'password', name: 'password', required: '', autocomplete: 'current-password', placeholder: '********' })),
     el('button', { type: 'submit', class: 'primary' }, ['ENTRAR \u00BB']),
     errorDiv,
@@ -36,11 +36,9 @@ export function renderLogin(state) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorDiv.textContent = '';
-    let email = form.email.value.trim();
+    const username = form.username.value.trim();
     const password = form.password.value;
-    if (email && !email.includes('@')) {
-      email = `${email.toLowerCase()}@porra.fake`;
-    }
+    const email = username ? `${username.toLowerCase()}@porra.fake` : '';
     const btn = form.querySelector('.primary');
     try {
       btn.disabled = true;
