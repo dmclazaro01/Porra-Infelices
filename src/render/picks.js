@@ -11,13 +11,15 @@ function resultMark(item) {
 }
 
 function renderGroupPickRow(item) {
+  const hasResult = item.actual_home_score != null;
   return el('div', { class: 'pick-row' }, [
     el('div', { class: 'pick-match' }, [
       teamInline(item.home_team_id),
       el('span', { class: 'versus', text: 'vs' }),
       teamInline(item.away_team_id),
     ]),
-    el('div', { class: 'pick-value', text: item.predicted || '-' }),
+    el('div', { class: 'pick-pred', text: item.predicted || '-' }),
+    el('div', { class: 'pick-actual', text: hasResult ? `${item.actual_home_score}-${item.actual_away_score} (${item.real_result})` : '—' }),
     resultMark(item),
   ]);
 }
@@ -112,24 +114,36 @@ export function renderPicks() {
   if (!entries.some(e => e.participant?.id === selectedId)) {
     selectedId = entries[0].participant?.id;
   }
-  const selected = entries.find(e => e.participant?.id === selectedId) || entries[0];
-  selectedId = selected.participant?.id;
 
   const layout = el('div', { class: 'picks-layout' });
   const list = el('div', { class: 'player-list' });
+  let detailWrap = el('div');
+
+  function showDetail(id) {
+    selectedId = id;
+    list.querySelectorAll('.player-select').forEach(b => b.classList.toggle('active', b.dataset.playerId === id));
+    const entry = entries.find(e => e.participant?.id === id) || entries[0];
+    const newDetail = renderPickDetail(entry);
+    detailWrap.replaceWith(newDetail);
+    detailWrap = newDetail;
+  }
+
   entries.forEach(entry => {
     const player = entry.participant;
-    list.append(el('button', {
+    const btn = el('button', {
       class: `player-select ${selectedId === player?.id ? 'active' : ''}`,
-      onclick: () => { selectedId = player?.id; },
     }, [
       el('span', { text: player?.name || '??' }),
       isAdmin() ? groupChip(player?.group_name) : '',
       paymentPill(player),
-    ]));
+    ]);
+    btn.dataset.playerId = player?.id;
+    btn.addEventListener('click', () => showDetail(player?.id));
+    list.append(btn);
   });
   layout.append(list);
-  layout.append(renderPickDetail(selected));
+  detailWrap = renderPickDetail(entries.find(e => e.participant?.id === selectedId) || entries[0]);
+  layout.append(detailWrap);
   wrap.append(layout);
   return wrap;
 }

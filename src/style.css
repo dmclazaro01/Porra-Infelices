@@ -112,7 +112,6 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .team-inline { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
 .flag { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 19px; font-size: 20px; line-height: 1; }
 .team-flag-img { width: 24px; height: 18px; border-radius: 2px; object-fit: cover; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-.team-flag-emoji { font-size: 18px; line-height: 1; flex-shrink: 0; }
 .team-name, .seed-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .team-code { flex: 0 0 auto; font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
 .seed-label { font-family: "Courier New", Courier, monospace; color: var(--muted); font-size: 13px; }
@@ -182,9 +181,11 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .pick-detail { min-width: 0; }
 .detail-section { display: grid; gap: 6px; padding: 14px; border-top: 2px solid var(--rule); }
 .detail-section h3 { margin: 0 0 4px; color: var(--navy); text-transform: uppercase; font-size: 15px; }
-.pick-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 100px; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--bevel-dark); background: var(--paper-dim); }
+.pick-row { display: grid; grid-template-columns: minmax(0, 1fr) 60px 80px auto; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--bevel-dark); background: var(--paper-dim); }
 .pick-match { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.versus, .match-code, .pick-value { color: var(--muted); font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 900; }
+.versus, .match-code, .pick-pred, .pick-actual, .pick-value { color: var(--muted); font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 900; }
+.pick-pred { text-align: center; }
+.pick-actual { text-align: center; }
 .result-mark { display: inline-flex; justify-content: center; min-height: 24px; padding: 2px 8px; border: 1px solid var(--frame); font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 900; }
 .result-mark.ok { background: var(--green); color: var(--paper); }
 .result-mark.bad { background: var(--red); color: var(--paper); }

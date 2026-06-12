@@ -7,8 +7,9 @@ const RULES = [
     lines: [
       'Por cada país acertado como clasificado (1º o 2º): +1 punto.',
       'Si aciertas dentro de que está clasificado, su posición exacta: +1 punto extra.',
-      'Si aciertas que ha clasificado como tercera (solo 8 terceros clasifican): +1 punto más.',
-      'Máximo 4 puntos por grupo · 12 grupos en juego.',
+      'Si aciertas el orden completo del grupo (1º a 4º): +1 punto más.',
+      'Por cada resultado (1X2) acertado en fase de grupos: +0.25 puntos.',
+      'Máximo 5 puntos de clasificación + 1,50 de resultados por grupo · 12 grupos.',
     ],
   },
   {
@@ -66,6 +67,6 @@ export function renderRules() {
     grid.append(card);
   });
   wrap.append(grid);
-  wrap.append(el('p', { class: 'rules-footer', text: 'Puntuación máxima: 92 puntos (56 grupos + 26 eliminatorias + 10 bonus).' }));
+  wrap.append(el('p', { class: 'rules-footer', text: 'Puntuación máxima: 114 puntos (60 clasificación + 18 resultados + 26 eliminatorias + 10 bonus).' }));
   return wrap;
 }

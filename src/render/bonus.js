@@ -44,31 +44,6 @@ export function renderBonus() {
 
   const locked = isLocked();
   const right = el('div', { class: 'lock-banner-right' });
-  if (canEditPredictions()) {
-    const saveBtn = el('button', { class: 'force-save', text: '💾 Forzar guardado' });
-    saveBtn.addEventListener('click', async () => {
-      saveBtn.textContent = '⏳ Guardando...';
-      saveBtn.disabled = true;
-      try {
-        await saveBonus(bonusLocal.top_scorer || null, bonusLocal.best_player || null);
-        serverBonus = { ...bonusLocal };
-        updateIndicators();
-        saveBtn.textContent = '✓ Guardado';
-        setTimeout(() => {
-          saveBtn.textContent = '💾 Forzar guardado';
-          saveBtn.disabled = false;
-        }, 2000);
-      } catch (e) {
-        console.error('Error saving bonus:', e);
-        saveBtn.textContent = '❌ Error: ' + e.message;
-        setTimeout(() => {
-          saveBtn.textContent = '💾 Forzar guardado';
-          saveBtn.disabled = false;
-        }, 3000);
-      }
-    });
-    right.append(saveBtn);
-  }
   right.append(el('span', { class: `badge ${canEditPredictions() ? 'open' : 'locked'}`, text: canEditPredictions() ? 'Editable' : 'Sin edición' }));
   wrap.append(el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [
     el('div', {}, [

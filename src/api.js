@@ -161,6 +161,95 @@ export async function fetchState() {
     all_profiles_map[p.id] = p;
   }
 
+  // Build enriched entries for picks view
+  const publicEntries = [];
+  if (isLocked || isAdmin) {
+    const userIds = new Set([
+      ...Object.keys(all_predictions),
+      ...Object.keys(all_tiebreaks),
+      ...Object.keys(all_knockout),
+      ...Object.keys(all_bonus),
+    ]);
+    for (const uid of userIds) {
+      const player = all_profiles_map[uid];
+      if (!player) continue;
+
+      const groupDetails = [];
+      const userPreds = all_predictions[uid] || {};
+      for (const match of matches) {
+        if (!match.group_letter) continue;
+        const predicted = userPreds[match.id];
+        let status = 'missing', points = 0;
+        let realResult = null;
+        if (match.actual_home_score != null && match.actual_away_score != null) {
+          realResult = match.actual_home_score > match.actual_away_score ? "1"
+            : match.actual_home_score < match.actual_away_score ? "2" : "X";
+        }
+        if (predicted != null) {
+          if (realResult != null) {
+            status = predicted === realResult ? 'correct' : 'wrong';
+            points = status === 'correct' ? 0.25 : 0;
+          } else {
+            status = 'pending';
+          }
+        }
+        groupDetails.push({
+          match_id: match.id,
+          home_team_id: match.home_team_id,
+          away_team_id: match.away_team_id,
+          predicted,
+          actual_home_score: match.actual_home_score,
+          actual_away_score: match.actual_away_score,
+          real_result: realResult,
+          status,
+          points,
+        });
+      }
+
+      const knockoutDetails = [];
+      const userKnockout = all_knockout[uid] || {};
+      for (const match of matches) {
+        if (match.group_letter) continue;
+        const predictedWinner = userKnockout[match.match_number];
+        let status = 'missing', points = 0;
+        if (predictedWinner != null) {
+          if (match.winner_team_id) {
+            status = predictedWinner === match.winner_team_id ? 'correct' : 'wrong';
+            points = status === 'correct' ? 1 : 0;
+          } else {
+            status = 'pending';
+          }
+        }
+        knockoutDetails.push({ match_number: match.match_number, predicted_winner: predictedWinner, round: match.round, status, points });
+      }
+
+      const bonusDetails = [];
+      const userBonus = all_bonus[uid] || {};
+      const bonusItems = [
+        { label: 'Máx. goleador', key: 'top_scorer' },
+        { label: 'Mejor jugador', key: 'best_player' },
+      ];
+      for (const item of bonusItems) {
+        const predicted = userBonus[item.key];
+        let status = 'missing', points = 0;
+        if (predicted != null) {
+          if (bonusAnswers && bonusAnswers[item.key]) {
+            status = predicted === bonusAnswers[item.key] ? 'correct' : 'wrong';
+            points = status === 'correct' ? 5 : 0;
+          } else {
+            status = 'pending';
+          }
+        }
+        bonusDetails.push({ label: item.label, predicted, status, points });
+      }
+
+      publicEntries.push({
+        participant: { id: player.id, name: player.name, is_active: player.is_active, group_name: player.group_name, has_paid: player.has_paid },
+        details: { groups: groupDetails, knockout: knockoutDetails, bonus: bonusDetails },
+      });
+    }
+  }
+
   let leaderboard = [];
   if (isLocked || isAdmin) {
     const activePlayers = allProfiles.filter(p => p.is_active);
@@ -242,7 +331,7 @@ export async function fetchState() {
     allKnockoutPredictions: (isLocked || isAdmin) ? allKnockoutPredictions : [],
     allBonusPredictions: (isLocked || isAdmin) ? allBonusPredictions : [],
     // Object versions for picks view
-    public_predictions: all_predictions,
+    public_predictions: publicEntries,
     public_tiebreaks: all_tiebreaks,
     public_knockout: all_knockout,
     public_bonus: all_bonus,

@@ -1,94 +1,103 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const FOOTBALL_DATA_API = 'https://api.football-data.org/v4';
-const COMPETITION_CODE = 'WC';
-const API_TOKEN = Deno.env.get('FOOTBALL_DATA_API_TOKEN');
+const API_BASE = 'https://worldcup26.ir';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  if (!API_TOKEN) {
-    return new Response(JSON.stringify({ error: 'FOOTBALL_DATA_API_TOKEN not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+Deno.serve(async (_req) => {
+  if (!SUPABASE_SERVICE_KEY) {
+    return new Response(JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   try {
-    const results = {};
+    // Fetch team code mapping from our DB
+    const { data: teams } = await supabase.from('teams').select('id, code');
+    if (!teams) throw new Error('No teams found');
 
-    // Fetch matches from football-data.org
-    const matchesResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/${COMPETITION_CODE}/matches`, {
-      headers: { 'X-Auth-Token': API_TOKEN },
-    });
-
-    if (!matchesResponse.ok) {
-      throw new Error(`Football Data API error: ${matchesResponse.status} ${matchesResponse.statusText}`);
+    const codeToId = {};
+    for (const t of teams) {
+      codeToId[t.code] = t.id;
     }
 
-    const matchesData = await matchesResponse.json();
+    // Fetch all our matches
+    const { data: ourMatches } = await supabase
+      .from('matches')
+      .select('id, match_number, home_team_id, away_team_id, status, actual_home_score, actual_away_score, actual_winner_team_id');
+
+    if (!ourMatches) throw new Error('No matches found in DB');
+
+    // Fetch matches from worldcup26.ir
+    const response = await fetch(`${API_BASE}/get/games`);
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const data = await response.json();
+    const apiGames = data.games || [];
     let matchesUpdated = 0;
 
-    for (const match of matchesData.matches || []) {
-      if (match.status === 'FINISHED' || match.status === 'IN_PLAY' || match.status === 'PAUSED' || match.status === 'TIMED') {
-        const matchUpdates = {
-          status: match.status === 'FINISHED' ? 'finished' : match.status === 'IN_PLAY' || match.status === 'PAUSED' ? 'live' : 'scheduled',
-          actual_home_score: match.score?.fullTime?.homeTeam ?? null,
-          actual_away_score: match.score?.fullTime?.awayTeam ?? null,
-          kickoff_at: match.utcDate,
-        };
-
-        if (match.score?.winner === 'HOME_TEAM') {
-          const homeTeam = match.homeTeam?.id;
-          if (homeTeam) matchUpdates.actual_winner_team_id = String(homeTeam);
-        } else if (match.score?.winner === 'AWAY_TEAM') {
-          const awayTeam = match.awayTeam?.id;
-          if (awayTeam) matchUpdates.actual_winner_team_id = String(awayTeam);
-        }
-
-        // Map football-data.org match to our match ID if possible
-        // We match by kickoff time and teams, since IDs won't match
-        const existingMatch = await findMatchByApiData(supabase, match);
-        if (existingMatch) {
-          const { error } = await supabase
-            .from('matches')
-            .update(matchUpdates)
-            .eq('id', existingMatch.id);
-          if (!error) matchesUpdated++;
-        }
-      }
+    // Build fifa_code lookup from API teams
+    const teamsResponse = await fetch(`${API_BASE}/get/teams`);
+    const teamsData = await teamsResponse.json();
+    const apiTeams = teamsData.teams || [];
+    const fifaCodeById = {};
+    for (const t of apiTeams) {
+      fifaCodeById[t.id] = t.fifa_code;
     }
 
-    // Fetch standings
-    const standingsResponse = await fetch(`${FOOTBALL_DATA_API}/competitions/${COMPETITION_CODE}/standings`, {
-      headers: { 'X-Auth-Token': API_TOKEN },
-    });
+    for (const game of apiGames) {
+      const homeCode = fifaCodeById[game.home_team_id];
+      const awayCode = fifaCodeById[game.away_team_id];
+      if (!homeCode || !awayCode) continue;
 
-    let standingsUpdated = 0;
-    if (standingsResponse.ok) {
-      const standingsData = await standingsResponse.json();
-      for (const standing of standingsData.standings || []) {
-        if (standing.type === 'TOTAL' && standing.stage === 'GROUP_STAGE') {
-          const groupLetter = standing.group?.replace('Group ', '');
-          if (!groupLetter) continue;
+      const homeId = codeToId[homeCode];
+      const awayId = codeToId[awayCode];
+      if (!homeId || !awayId) {
+        console.warn(`Unknown team codes: ${homeCode} (${game.home_team_id}) vs ${awayCode} (${game.away_team_id})`);
+        continue;
+      }
 
-          for (const entry of standing.table || []) {
-            const teamId = String(entry.team?.id);
-            const teamData = {
-              id: teamId,
-              name: entry.team?.name || '',
-              code: entry.team?.tla || entry.team?.ShortName || '',
-              flag: entry.team?.crest || '',
-            };
+      // Find match in our DB by home/away team IDs
+      const ourMatch = ourMatches.find(m =>
+        m.home_team_id?.toLowerCase() === homeId?.toLowerCase() &&
+        m.away_team_id?.toLowerCase() === awayId?.toLowerCase()
+      );
 
-            const { error: teamError } = await supabase
-              .from('teams')
-              .upsert(teamData, { onConflict: 'id' });
-            if (!teamError) standingsUpdated++;
-          }
+      if (!ourMatch) {
+        console.warn(`No match found for ${homeCode} vs ${awayCode}`);
+        continue;
+      }
+
+      const updates = {};
+
+      if (game.finished === 'TRUE') {
+        updates.status = 'finished';
+        const homeScore = parseInt(game.home_score, 10);
+        const awayScore = parseInt(game.away_score, 10);
+        if (!isNaN(homeScore)) updates.actual_home_score = homeScore;
+        if (!isNaN(awayScore)) updates.actual_away_score = awayScore;
+        if (!isNaN(homeScore) && !isNaN(awayScore)) {
+          if (homeScore > awayScore) updates.actual_winner_team_id = homeId;
+          else if (awayScore > homeScore) updates.actual_winner_team_id = awayId;
+        }
+      } else if (game.time_elapsed && game.time_elapsed !== 'notstarted' && game.time_elapsed !== 'finished') {
+        updates.status = 'live';
+        const homeScore = parseInt(game.home_score, 10);
+        const awayScore = parseInt(game.away_score, 10);
+        if (!isNaN(homeScore)) updates.actual_home_score = homeScore;
+        if (!isNaN(awayScore)) updates.actual_away_score = awayScore;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('matches')
+          .update(updates)
+          .eq('id', ourMatch.id);
+
+        if (updateError) {
+          console.error(`Error updating match ${ourMatch.id}:`, updateError);
+        } else {
+          matchesUpdated++;
         }
       }
     }
@@ -99,18 +108,17 @@ Deno.serve(async (req) => {
       .update({ last_sync_at: new Date().toISOString(), sync_status: 'success' })
       .eq('id', 1);
 
-    results.matchesUpdated = matchesUpdated;
-    results.standingsUpdated = standingsUpdated;
-    results.syncAt = new Date().toISOString();
-
-    return new Response(JSON.stringify(results), {
+    return new Response(JSON.stringify({ matchesUpdated, syncAt: new Date().toISOString() }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    await supabase
-      .from('sync_log')
-      .update({ sync_status: `error: ${error.message}` })
-      .eq('id', 1);
+    console.error('Sync error:', error);
+    try {
+      await supabase
+        .from('sync_log')
+        .update({ sync_status: `error: ${error.message}` })
+        .eq('id', 1);
+    } catch (_) {}
 
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
@@ -118,38 +126,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-async function findMatchByApiData(supabase, apiMatch) {
-  const kickoffDate = apiMatch.utcDate?.substring(0, 10);
-  const homeId = String(apiMatch.homeTeam?.id || '');
-  const awayId = String(apiMatch.awayTeam?.id || '');
-
-  if (!homeId && !awayId) return null;
-
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('id, home_team_id, away_team_id, kickoff_at')
-    .eq('stage', 'GROUP');
-
-  if (!matches) return null;
-
-  for (const m of matches) {
-    if (m.home_team_id === homeId && m.away_team_id === awayId) {
-      return m;
-    }
-  }
-
-  // Fallback: match by kickoff date if teams don't match
-  const { data: dateMatches } = await supabase
-    .from('matches')
-    .select('id, kickoff_at, home_team_id, away_team_id')
-    .gte('kickoff_at', kickoffDate + 'T00:00:00')
-    .lte('kickoff_at', kickoffDate + 'T23:59:59')
-    .eq('stage', 'GROUP');
-
-  if (dateMatches && dateMatches.length === 1) {
-    return dateMatches[0];
-  }
-
-  return null;
-}

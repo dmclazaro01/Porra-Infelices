@@ -1,4 +1,4 @@
-import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange } from './api.js';
+import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange, getCurrentUser } from './api.js';
 import { getState, load, isLocked, isAdmin, canEditPredictions, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
 import { renderLogin, renderGroupChoice } from './render/login.js';
 import { renderTopbar } from './render/topbar.js';
@@ -192,6 +192,29 @@ function renderTabs() {
   return tabs;
 }
 
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
+async function autoSyncIfStale() {
+  const state = getState();
+  if (!state) return;
+  const lastSync = state.sync?.last_sync_at;
+  if (lastSync) {
+    const elapsed = Date.now() - new Date(lastSync).getTime();
+    if (elapsed < SIX_HOURS_MS) return;
+  }
+  try {
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    await fetch(`${supabaseUrl}/functions/v1/sync-results`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${anonKey}` },
+    });
+    await load();
+  } catch (e) {
+    console.warn('Auto-sync failed:', e);
+  }
+}
+
 async function init() {
   initSupabase();
   try {
@@ -201,6 +224,10 @@ async function init() {
   }
   render();
   startLiveRefresh();
+  // first sync check
+  autoSyncIfStale();
+  // check again every 30s (also refreshes on visibility change in state.js)
+  setInterval(autoSyncIfStale, 30000);
 }
 
 subscribe(() => {

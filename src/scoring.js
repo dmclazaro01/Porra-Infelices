@@ -140,7 +140,7 @@ export function getBestThirds(allGroups, groupMatches, predictionsOrResults) {
   const thirds = [];
 
   for (const group of allGroups) {
-    const matches = groupMatches.filter((m) => m.group === group.letter);
+    const matches = groupMatches.filter((m) => m.group_letter === group.letter);
     const standings = computeGroupStandings(group.letter, matches, predictionsOrResults);
     const third = standings.find((t) => t.position === 3);
     if (third) thirds.push(third);
@@ -167,59 +167,54 @@ export function computeGroupPoints(
 ) {
   let total = 0;
   const details = [];
-  const bestThirds = getBestThirds(allGroups, allMatches, realResults);
 
   for (const group of allGroups) {
-    const groupMatches = allMatches.filter((m) => m.group === group.letter);
+    const groupMatches = allMatches.filter((m) => m.group_letter === group.letter);
+    const allPlayed = groupMatches.every(m => m.actual_home_score != null && m.actual_away_score != null);
 
-    const userStandings = computeGroupStandings(
-      group.letter,
-      groupMatches,
-      userPredictions,
-      userTiebreaks
-    );
-    const realStandings = computeGroupStandings(
-      group.letter,
-      groupMatches,
-      realResults
-    );
+    let classified = 0, exact = 0, fullOrder = 0;
 
-    const userClassified = userStandings
-      .filter((t) => t.position <= 2)
-      .map((t) => t.team_id);
-    const realClassified = realStandings
-      .filter((t) => t.position <= 2)
-      .map((t) => t.team_id);
+    if (allPlayed) {
+      const userStandings = computeGroupStandings(
+        group.letter,
+        groupMatches,
+        userPredictions,
+        userTiebreaks
+      );
+      const realStandings = computeGroupStandings(
+        group.letter,
+        groupMatches,
+        realResults
+      );
 
-    let classified = 0;
-    for (const teamId of userClassified) {
-      if (realClassified.includes(teamId)) classified++;
+      const userClassified = userStandings
+        .filter((t) => t.position <= 2)
+        .map((t) => t.team_id);
+      const realClassified = realStandings
+        .filter((t) => t.position <= 2)
+        .map((t) => t.team_id);
+
+      for (const teamId of userClassified) {
+        if (realClassified.includes(teamId)) classified++;
+      }
+
+      const userFirst = userStandings.find((t) => t.position === 1);
+      const realFirst = realStandings.find((t) => t.position === 1);
+      if (userFirst && realFirst && userFirst.team_id === realFirst.team_id) exact++;
+
+      const userSecond = userStandings.find((t) => t.position === 2);
+      const realSecond = realStandings.find((t) => t.position === 2);
+      if (userSecond && realSecond && userSecond.team_id === realSecond.team_id) exact++;
+
+      const userOrder = [...userStandings].sort((a, b) => a.position - b.position).map(t => t.team_id);
+      const realOrder = [...realStandings].sort((a, b) => a.position - b.position).map(t => t.team_id);
+      if (userOrder.length === realOrder.length && userOrder.every((tid, i) => tid === realOrder[i])) {
+        fullOrder = 1;
+      }
     }
 
-    let exact = 0;
-    const userFirst = userStandings.find((t) => t.position === 1);
-    const realFirst = realStandings.find((t) => t.position === 1);
-    if (userFirst && realFirst && userFirst.team_id === realFirst.team_id) exact++;
-
-    const userSecond = userStandings.find((t) => t.position === 2);
-    const realSecond = realStandings.find((t) => t.position === 2);
-    if (userSecond && realSecond && userSecond.team_id === realSecond.team_id) exact++;
-
-    const userThird = userStandings.find((t) => t.position === 3);
-    const realThird = realStandings.find((t) => t.position === 3);
-
-    let third = 0;
-    if (
-      userThird &&
-      realThird &&
-      userThird.team_id === realThird.team_id &&
-      bestThirds.includes(realThird.team_id)
-    ) {
-      third = 1;
-    }
-
-    total += classified + exact + third;
-    details.push({ group: group.letter, classified, exact, third });
+    total += classified + exact + fullOrder;
+    details.push({ group: group.letter, classified, exact, fullOrder });
   }
 
   return { total, details };
@@ -274,7 +269,7 @@ export function computeTotalPoints(userId, state) {
     if (
       match.actual_home_score != null &&
       match.actual_away_score != null &&
-      match.group
+      match.group_letter
     ) {
       if (match.actual_home_score > match.actual_away_score) {
         realResults[match.id] = "1";
@@ -299,6 +294,19 @@ export function computeTotalPoints(userId, state) {
     realResults
   );
 
+  // Match result points (0.25 per correct 1X2)
+  let matchResultPoints = 0;
+  for (const match of matches) {
+    if (!match.group_letter) continue;
+    if (match.actual_home_score == null || match.actual_away_score == null) continue;
+    const realResult = match.actual_home_score > match.actual_away_score ? "1"
+      : match.actual_home_score < match.actual_away_score ? "2" : "X";
+    const userPred = userGroupPredictions[match.id];
+    if (userPred != null && userPred === realResult) {
+      matchResultPoints += 0.25;
+    }
+  }
+
   const userKnockoutPredictions = {};
   for (const pred of allKnockoutPredictions) {
     if (pred.user_id === userId) {
@@ -308,7 +316,7 @@ export function computeTotalPoints(userId, state) {
 
   const realKnockoutResults = {};
   for (const match of matches) {
-    if (!match.group && match.winner_team_id) {
+    if (!match.group_letter && match.winner_team_id) {
       realKnockoutResults[match.match_number] = {
         winner_team_id: match.winner_team_id,
       };
@@ -328,5 +336,5 @@ export function computeTotalPoints(userId, state) {
     bonusAnswers.best_player
   );
 
-  return groupPoints.total + knockoutPoints + bonusPoints;
+  return groupPoints.total + matchResultPoints + knockoutPoints + bonusPoints;
 }

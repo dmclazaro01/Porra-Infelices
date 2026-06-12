@@ -49,12 +49,8 @@ export function teamFlag(teamId) {
 }
 
 function getFlagImg(team) {
-  if (team.flag) {
-    return el('span', { class: 'team-flag-emoji' }, [team.flag]);
-  }
   const code = team.code ? team.code.toLowerCase() : '';
   if (!code) return null;
-  // Map some non-standard codes to ISO country codes
   const codeMap = {
     'kor': 'kr', 'cze': 'cz', 'rsa': 'za', 'bih': 'ba', 'qat': 'qa',
     'sui': 'ch', 'hai': 'ht', 'sco': 'gb-sct', 'usa': 'us', 'par': 'py',
@@ -68,13 +64,12 @@ function getFlagImg(team) {
     'bel': 'be', 'mar': 'ma', 'can': 'ca',
   };
   const isoCode = codeMap[code] || code;
-  const img = el('img', {
+  return el('img', {
     class: 'team-flag-img',
     src: `https://flagcdn.com/24x18/${isoCode}.png`,
     alt: team.name,
     loading: 'lazy',
   });
-  return img;
 }
 
 export function teamInline(teamId, fallback = '', options = {}) {
