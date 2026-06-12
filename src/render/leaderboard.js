@@ -78,7 +78,6 @@ export function renderLeaderboard() {
   ]));
 
   wrap.append(renderPrizePool(state));
-  wrap.append(renderPaymentStatus(state));
 
   const leaderboard = state.leaderboard || [];
   const table = el('table', { class: 'leaderboard' });
