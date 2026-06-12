@@ -255,11 +255,14 @@ function renderSettingsPanel(state) {
     min: '0',
     step: '0.5',
   });
+  // Track checkbox state in a variable to survive re-renders from auto-sync
+  let lockedValue = settings.locked || false;
   const lockedCheckId = 'chk-locked';
   const lockedCheck = el('input', {
     id: lockedCheckId,
     type: 'checkbox',
-    checked: settings.locked || false,
+    checked: lockedValue,
+    onchange: () => { lockedValue = lockedCheck.checked; },
   });
 
   const saveError = el('div', { class: 'error' });
@@ -271,7 +274,7 @@ function renderSettingsPanel(state) {
       try {
         await api.adminUpdateSettings({
           lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
-          locked: lockedCheck.checked,
+          locked: lockedValue,
           entry_fee_cents: Math.round(Number(feeInput.value) * 100),
         });
         await load();
@@ -289,10 +292,6 @@ function renderSettingsPanel(state) {
     el('div', { class: 'fee-row' }, [
       el('label', { class: 'fee-label', text: 'Fecha de cierre:' }),
       deadlineInput,
-    ]),
-    el('div', { class: 'fee-row' }, [
-      el('label', { class: 'fee-label', text: 'Entrada (€):' }),
-      feeInput,
     ]),
     el('div', { class: 'fee-row' }, [
       el('label', { for: lockedCheckId, class: 'fee-label', style: 'cursor:pointer', text: 'Bloqueada:' }),

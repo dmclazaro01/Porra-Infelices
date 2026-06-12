@@ -235,8 +235,8 @@ async function init() {
   }
   render();
   startLiveRefresh();
-  // first sync check
-  autoSyncIfStale();
+  // first sync check after page settles to avoid disrupting user interaction
+  setTimeout(autoSyncIfStale, 10000);
   // check again every 30s (also refreshes on visibility change in state.js)
   setInterval(autoSyncIfStale, 30000);
 }
