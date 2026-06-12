@@ -17,6 +17,8 @@ let activeTab = 'groups';
 const app = document.getElementById('app');
 
 function render() {
+  const tabsEl = document.querySelector('.tabs');
+  const savedScrollLeft = tabsEl ? tabsEl.scrollLeft : 0;
   app.textContent = '';
   const state = getState();
   if (!state || !state.profile) {
@@ -43,6 +45,12 @@ function render() {
   else if (activeTab === 'admin') container.append(renderAdmin());
   shell.append(container);
   app.append(shell);
+  if (savedScrollLeft) {
+    requestAnimationFrame(() => {
+      const newTabs = document.querySelector('.tabs');
+      if (newTabs) newTabs.scrollLeft = savedScrollLeft;
+    });
+  }
 }
 
 function renderLoginScreen() {

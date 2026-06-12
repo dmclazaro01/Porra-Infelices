@@ -96,11 +96,11 @@ export async function fetchState() {
     supabase.from('groups_t').select('*').then(r => { if (r.error) throw r.error; return r.data.map(g => ({ ...g, teams: (g.team_ids || []).map(tid => ({ team_id: tid })) })); }),
     supabase.from('matches').select('*').order('match_number').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('settings').select('*').single().then(r => { if (r.error) throw r.error; return r.data; }),
-    supabase.from('sync_log').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
-    supabase.from('bonus_answers').select('*').limit(1).single().then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('sync_log').select('*').limit(1).maybeSingle().then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.from('bonus_answers').select('*').limit(1).maybeSingle().then(r => { if (r.error) throw r.error; return r.data; }),
   ]);
 
-  const isLocked = settings.locked;
+  const isLocked = settings.locked || (settings.lock_deadline && new Date(settings.lock_deadline) <= new Date());
 
   let groupPredictions = [];
   let tiebreakPredictions = [];

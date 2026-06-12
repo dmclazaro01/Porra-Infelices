@@ -119,8 +119,7 @@ Deno.serve(async (req) => {
     // Update sync log
     await supabase
       .from('sync_log')
-      .update({ last_sync_at: new Date().toISOString(), sync_status: 'success' })
-      .eq('id', 1);
+      .upsert({ id: 1, last_sync_at: new Date().toISOString(), sync_status: 'success' });
 
     return new Response(JSON.stringify({ matchesUpdated, syncAt: new Date().toISOString() }), {
       headers: { 'Content-Type': 'application/json' },
@@ -130,8 +129,7 @@ Deno.serve(async (req) => {
     try {
       await supabase
         .from('sync_log')
-        .update({ sync_status: `error: ${error.message}` })
-        .eq('id', 1);
+        .upsert({ id: 1, sync_status: `error: ${error.message}` });
     } catch (_) {}
 
     return new Response(JSON.stringify({ error: error.message }), {

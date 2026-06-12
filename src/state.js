@@ -13,8 +13,11 @@ export async function load() {
   try {
     state = await api.fetchState();
   } catch (e) {
-    console.warn('Not authenticated, clearing state');
-    state = null;
+    if (e.message === 'Not authenticated') {
+      state = null;
+    } else {
+      console.warn('fetchState failed:', e.message);
+    }
   }
   notifyListeners();
   scheduleLockRefresh();
