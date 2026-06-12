@@ -250,6 +250,8 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .admin-table th, .admin-table td { text-align: left; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .small-action { min-height: 30px; padding: 2px 10px; font-size: 11px; }
+.pay-paid { background: var(--green); color: #fff; border-color: var(--green); }
+.pay-pending { background: var(--red); color: #fff; border-color: var(--red); }
 .admin-create-form { display: flex; gap: 10px; padding: 14px; }
 .admin-create-form input { flex: 1; min-width: 0; }
 .error { min-height: 20px; color: var(--red); font-weight: 700; }

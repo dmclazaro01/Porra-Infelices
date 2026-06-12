@@ -107,6 +107,8 @@ function renderPlayerManagement(state) {
   panel.append(createForm);
   panel.append(createError);
 
+  const playerError = el('div', { class: 'error' });
+
   const table = el('table', { class: 'admin-table' });
   table.append(el('thead', {}, [
     el('tr', {}, ['Nombre', 'Grupo', 'Rol', 'Activo', 'Pagado', 'Acciones'].map(h => el('th', { text: h }))),
@@ -117,12 +119,18 @@ function renderPlayerManagement(state) {
     actions.append(el('button', {
       class: 'small-action',
       text: player.is_active ? 'Desactivar' : 'Activar',
-      onclick: async () => { await api.adminToggleActive(player.id); await load(); },
+      onclick: async () => {
+        playerError.textContent = '';
+        try { await api.adminToggleActive(player.id); await load(); } catch (e) { playerError.textContent = e.message; }
+      },
     }));
     actions.append(el('button', {
-      class: `small-action ${player.has_paid ? 'pay-action' : ''}`,
+      class: `small-action ${player.has_paid ? 'pay-paid' : 'pay-pending'}`,
       text: player.has_paid ? '✓ Pagado' : 'Pendiente',
-      onclick: async () => { await api.adminTogglePaid(player.id); await load(); },
+      onclick: async () => {
+        playerError.textContent = '';
+        try { await api.adminTogglePaid(player.id); await load(); } catch (e) { playerError.textContent = e.message; }
+      },
     }));
     tbody.append(el('tr', {}, [
       el('td', { text: player.name }),
@@ -135,6 +143,7 @@ function renderPlayerManagement(state) {
   });
   table.append(tbody);
   panel.append(table);
+  panel.append(playerError);
   return panel;
 }
 
