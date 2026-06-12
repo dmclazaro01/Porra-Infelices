@@ -74,7 +74,7 @@ function renderPlayerManagement(state) {
   ]));
 
   const createForm = el('div', { class: 'admin-create-form' });
-  const emailInput = el('input', { type: 'email', placeholder: 'Email del jugador', style: 'flex:1' });
+  const usernameInput = el('input', { type: 'text', placeholder: 'Usuario (para iniciar sesión)', style: 'flex:1' });
   const nameInput = el('input', { type: 'text', placeholder: 'Nombre visible', style: 'flex:1' });
   const passwordInput = el('input', { type: 'password', placeholder: 'Contraseña', style: 'flex:1' });
   const groupSelect = el('select', { style: 'flex:1' });
@@ -89,8 +89,9 @@ function renderPlayerManagement(state) {
   createBtn.addEventListener('click', async () => {
     createError.textContent = '';
     try {
-      await api.adminCreatePlayer(emailInput.value, passwordInput.value, nameInput.value, groupSelect.value || null);
-      emailInput.value = '';
+      const fakeEmail = `${usernameInput.value.trim().toLowerCase()}@porra.fake`;
+      await api.adminCreatePlayer(fakeEmail, passwordInput.value, nameInput.value, groupSelect.value || null);
+      usernameInput.value = '';
       nameInput.value = '';
       passwordInput.value = '';
       groupSelect.value = '';
@@ -102,7 +103,7 @@ function renderPlayerManagement(state) {
     }
   });
 
-  createForm.append(emailInput, nameInput, passwordInput, groupSelect, createBtn);
+  createForm.append(usernameInput, nameInput, passwordInput, groupSelect, createBtn);
   panel.append(createForm);
   panel.append(createError);
 
