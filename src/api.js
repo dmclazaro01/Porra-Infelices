@@ -291,14 +291,6 @@ export async function fetchState() {
   const knockout_predictions = Object.fromEntries(knockoutPredictions.map(k => [k.match_number, k.winner_team_id]));
   const bonus = bonusPredictions.length > 0 ? { top_scorer: bonusPredictions[0].top_scorer, best_player: bonusPredictions[0].best_player } : {};
 
-  const leaderboardWithRank = leaderboard.map((row, index) => ({
-    ...row,
-    participant_id: row.id,
-    total: row.points,
-    rank: index + 1,
-    prize: 0,
-  }));
-
   const prize_pool = {
     groups: playerGroups.map(pg => {
       const groupPlayers = allProfiles.filter(p => p.group_name === pg.name && p.is_active);
@@ -312,6 +304,26 @@ export async function fetchState() {
       };
     }),
   };
+
+  const prizePerGroup = {};
+  for (const pg of prize_pool.groups) {
+    const groupRanks = leaderboard
+      .filter(p => (allProfiles.find(pr => pr.id === p.id)?.group_name || '') === pg.name)
+      .sort((a, b) => b.points - a.points);
+    prizePerGroup[pg.name] = groupRanks[0]?.id ? pg.pot : 0;
+  }
+
+  const leaderboardWithRank = leaderboard.map((row, index) => {
+    const groupName = allProfiles.find(p => p.id === row.id)?.group_name || '';
+    const prize = prizePerGroup[groupName] === row.id ? prizePerGroup[groupName] : 0;
+    return {
+      ...row,
+      participant_id: row.id,
+      total: row.points,
+      rank: index + 1,
+      prize,
+    };
+  });
 
   return {
     profile,

@@ -39,7 +39,7 @@ const RULES = [
     icon: '💶', title: 'Bote y reparto', color: 'purple',
     lines: [
       'Entrada: 2€ por persona.',
-      'Reparto: 2º se lleva su apuesta (2€), 1º se lleva el resto del bote.',
+      'Reparto: 1º se lleva todo el bote.',
       'El premio exacto siempre visible en la pestaña Clasificación.',
     ],
   },
