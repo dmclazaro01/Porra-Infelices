@@ -485,20 +485,19 @@ export async function adminUpdateBonusAnswers(topScorer, bestPlayer) {
 }
 
 export async function adminCreatePlayer(email, password, name, groupName) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { name } },
+  const token = await getSessionToken();
+  if (!token) throw new Error('Not authenticated');
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ username: email.replace(/@.*/, ''), password, name, group_name: groupName || undefined }),
   });
-  if (error) throw error;
-  if (groupName && data?.user?.id) {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ group_name: groupName })
-      .eq('id', data.user.id);
-    if (updateError) throw updateError;
-  }
-  return data;
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to create user');
+  return result;
 }
 
 export async function adminSetRole(userId, role) {
