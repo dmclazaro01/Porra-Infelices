@@ -90,8 +90,9 @@ function renderLoginScreen() {
     e.preventDefault();
     error.textContent = '';
     try {
-      const username = emailInput.value.trim();
-      await login(username ? `${username.toLowerCase()}@porra.fake` : '', passwordInput.value);
+      const raw = emailInput.value.trim();
+      const email = raw.includes('@') ? raw : raw ? `${raw.toLowerCase()}@porra.fake` : '';
+      await login(email, passwordInput.value);
       await load();
       render();
     } catch (exc) {
@@ -193,7 +194,7 @@ function renderTabs() {
   return tabs;
 }
 
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+const SYNC_INTERVAL_MS = 30 * 60 * 1000;
 
 async function autoSyncIfStale() {
   const state = getState();
@@ -201,7 +202,7 @@ async function autoSyncIfStale() {
   const lastSync = state.sync?.last_sync_at;
   if (lastSync) {
     const elapsed = Date.now() - new Date(lastSync).getTime();
-    if (elapsed < SIX_HOURS_MS) return;
+    if (elapsed < SYNC_INTERVAL_MS) return;
   }
   try {
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

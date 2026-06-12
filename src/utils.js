@@ -115,12 +115,17 @@ const SPANISH_MONTHS = [
 export function formatDate(isoString) {
   if (!isoString) return '';
   const d = new Date(isoString);
-  const day = d.getDate();
-  const month = SPANISH_MONTHS[d.getMonth()];
-  const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${day} ${month} ${year} · ${hours}:${minutes}`;
+  const parts = new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(d);
+  const map = {};
+  for (const p of parts) map[p.type] = p.value;
+  return `${map.day} ${map.month} ${map.year} · ${map.hour}:${map.minute}`;
 }
 
 export function formatMoney(cents) {

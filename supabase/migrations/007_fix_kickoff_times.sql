@@ -1,0 +1,3 @@
+-- Fix kickoff_at times: API's local_date was stored as UTC but is actually offset
+-- Applied via Node.js script: parsed worldcup26.ir local_date, added 6 hours for correct UTC
+-- Correct: M1=2026-06-11T19:00:00Z (21:00 CEST), M2=2026-06-12T02:00:00Z (04:00 CEST)

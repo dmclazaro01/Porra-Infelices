@@ -111,7 +111,7 @@ function renderMatchRow(match) {
   });
   middle.append(choices);
   if (match.kickoff_at) {
-    middle.append(el('div', { class: 'match-time', text: new Date(match.kickoff_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }));
+    middle.append(el('div', { class: 'match-time', text: new Date(match.kickoff_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }));
   }
   row.append(middle);
   row.append(el('div', { class: 'team-block left' }, [teamInline(match.away_team_id, match.away_label || 'TBD')]));

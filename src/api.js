@@ -172,7 +172,7 @@ export async function fetchState() {
     ]);
     for (const uid of userIds) {
       const player = all_profiles_map[uid];
-      if (!player) continue;
+      if (!player || !player.is_active) continue;
 
       const groupDetails = [];
       const userPreds = all_predictions[uid] || {};

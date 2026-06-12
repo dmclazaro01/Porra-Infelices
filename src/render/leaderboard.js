@@ -22,9 +22,9 @@ function renderPrizePool(state) {
       block.append(el('div', { class: 'pot-block-title' }, [groupChip(item.name)]));
     }
     block.append(el('div', { class: 'money-grid' }, [
-      metricCard('Bote', formatMoney(item.pot * 100 || 0), `${item.paid_count || 0}/${item.active_count || 0} pagos`),
+      metricCard('Bote', formatMoney(item.pot || 0), `${item.paid_count || 0}/${item.active_count || 0} pagos`),
       metricCard('Entrada', formatMoney(item.entry_fee * 100 || 200), 'por jugador'),
-      metricCard('🥇 1º se lleva', formatMoney((item.pot * 100 || 0) - 200), 'resto del bote'),
+      metricCard('🥇 1º se lleva', formatMoney((item.pot || 0) - 200), 'resto del bote'),
       metricCard('🥈 2º se lleva', formatMoney(200), 'su apuesta'),
     ]));
     wrap.append(block);
