@@ -260,16 +260,26 @@ function renderSettingsPanel(state) {
     checked: settings.locked || false,
   });
 
+  const saveError = el('div', { class: 'error' });
   const saveBtn = el('button', {
     class: 'primary',
     text: 'Guardar configuración',
     onclick: async () => {
-      await api.adminUpdateSettings({
-        lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
-        locked: lockedCheck.checked,
-        entry_fee_cents: Math.round(Number(feeInput.value) * 100),
-      });
-      await load();
+      saveError.textContent = '';
+      try {
+        await api.adminUpdateSettings({
+          lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
+          locked: lockedCheck.checked,
+          entry_fee_cents: Math.round(Number(feeInput.value) * 100),
+        });
+        await load();
+        saveError.textContent = '✓ Guardado';
+        saveError.style.color = 'var(--green)';
+        setTimeout(() => { saveError.textContent = ''; saveError.style.color = ''; }, 3000);
+      } catch (e) {
+        saveError.textContent = e.message;
+        saveError.style.color = 'var(--red)';
+      }
     },
   });
 
@@ -283,10 +293,10 @@ function renderSettingsPanel(state) {
       feeInput,
     ]),
     el('div', { class: 'fee-row' }, [
-      el('label', { class: 'fee-label', text: 'Bloqueada:' }),
-      lockedCheck,
+      el('label', { class: 'fee-label', style: 'display:flex;align-items:center;gap:6px;cursor:pointer' }, ['Bloqueada:', lockedCheck]),
     ]),
     saveBtn,
+    saveError,
   ]));
 
   return panel;
