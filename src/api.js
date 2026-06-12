@@ -178,7 +178,7 @@ export async function fetchState() {
     ]);
     for (const uid of userIds) {
       const player = all_profiles_map[uid];
-      if (!player || !player.is_active) continue;
+      if (!player || !player.is_active || !player.has_paid) continue;
 
       const groupDetails = [];
       const userPreds = all_predictions[uid] || {};
@@ -263,7 +263,7 @@ export async function fetchState() {
 
   let leaderboard = [];
   if (isLocked || isAdmin) {
-    const activePlayers = allProfiles.filter(p => p.is_active);
+    const activePlayers = allProfiles.filter(p => p.is_active && p.has_paid);
     leaderboard = activePlayers.map(player => {
       const total = computeTotalPoints(player.id, {
         allGroupPredictions,
