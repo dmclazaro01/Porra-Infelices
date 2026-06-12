@@ -69,10 +69,10 @@ function renderLoginScreen() {
   const form = document.createElement('form');
   form.className = 'login-form';
   const emailInput = document.createElement('input');
-  emailInput.name = 'email';
-  emailInput.type = 'email';
+  emailInput.name = 'username';
+  emailInput.type = 'text';
   emailInput.autocomplete = 'username';
-  emailInput.placeholder = 'Tu email';
+  emailInput.placeholder = 'tu.usuario';
   emailInput.maxLength = 60;
   const passwordInput = document.createElement('input');
   passwordInput.name = 'password';
@@ -90,7 +90,8 @@ function renderLoginScreen() {
     e.preventDefault();
     error.textContent = '';
     try {
-      await login(emailInput.value.trim(), passwordInput.value);
+      const username = emailInput.value.trim();
+      await login(username ? `${username.toLowerCase()}@porra.fake` : '', passwordInput.value);
       await load();
       render();
     } catch (exc) {
@@ -98,7 +99,7 @@ function renderLoginScreen() {
     }
   });
 
-  form.append(createField('Email', emailInput));
+  form.append(createField('Usuario', emailInput));
   form.append(createField('Contraseña', passwordInput));
   form.append(button);
   form.append(error);
