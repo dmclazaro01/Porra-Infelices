@@ -255,7 +255,9 @@ function renderSettingsPanel(state) {
     min: '0',
     step: '0.5',
   });
+  const lockedCheckId = 'chk-locked';
   const lockedCheck = el('input', {
+    id: lockedCheckId,
     type: 'checkbox',
     checked: settings.locked || false,
   });
@@ -293,7 +295,8 @@ function renderSettingsPanel(state) {
       feeInput,
     ]),
     el('div', { class: 'fee-row' }, [
-      el('label', { class: 'fee-label', style: 'display:flex;align-items:center;gap:6px;cursor:pointer' }, ['Bloqueada:', lockedCheck]),
+      el('label', { for: lockedCheckId, class: 'fee-label', style: 'cursor:pointer', text: 'Bloqueada:' }),
+      lockedCheck,
     ]),
     saveBtn,
     saveError,
