@@ -5,7 +5,7 @@ import { computeGroupStandings } from '../scoring.js';
 function computeRealStandingsForGroup(letter, matches) {
   const state = getState();
   const group = state.groups.find(g => g.letter === letter);
-  if (!group) return [];
+  if (!group) return el('div');
   const realResults = {};
   for (const m of matches) {
     if (m.status !== 'finished' && m.actual_home_score === null) continue;
@@ -13,7 +13,26 @@ function computeRealStandingsForGroup(letter, matches) {
     else if (m.actual_home_score < m.actual_away_score) realResults[m.id] = '2';
     else realResults[m.id] = 'X';
   }
-  return computeGroupStandings(letter, matches, realResults, null);
+  const standings = computeGroupStandings(letter, matches, realResults, null);
+  const table = el('table', { class: 'standings' });
+  table.append(el('thead', {}, [
+    el('tr', {}, ['#', 'Equipo', 'Pts', 'PJ', 'G', 'E', 'P'].map(h => el('th', { text: h }))),
+  ]));
+  const tbody = el('tbody');
+  standings.forEach(row => {
+    const rowClass = row.position <= 2 ? 'qualified' : row.position === 3 ? 'third-place' : '';
+    tbody.append(el('tr', { class: rowClass }, [
+      el('td', { text: String(row.position) }),
+      el('td', {}, [teamInline(row.team_id)]),
+      el('td', { text: String(row.points) }),
+      el('td', { text: String(row.played) }),
+      el('td', { text: String(row.won) }),
+      el('td', { text: String(row.drawn) }),
+      el('td', { text: String(row.lost) }),
+    ]));
+  });
+  table.append(tbody);
+  return table;
 }
 
 const ROUND_ORDER = ['R32', 'R16', 'QF', 'SF', 'THIRD', 'FINAL'];
@@ -70,32 +89,6 @@ function renderResultGroup(group, state) {
     panel.append(computeRealStandingsForGroup(group.letter, matches));
   }
   return panel;
-}
-
-function computeRealStandingsFromGroup(letter, matches) {
-  const state = getState();
-  const group = state.groups.find(g => g.letter === letter);
-  if (!group) return el('div');
-  const standings = computeRealStandings(letter, matches);
-  const table = el('table', { class: 'standings' });
-  const thead = el('thead');
-  thead.append(el('tr', {}, ['#', 'Equipo', 'Pts', 'PJ', 'G', 'E', 'P'].map(h => el('th', { text: h }))));
-  table.append(thead);
-  const tbody = el('tbody');
-  standings.forEach(row => {
-    const rowClass = row.position <= 2 ? 'qualified' : row.position === 3 ? 'third-place' : '';
-    tbody.append(el('tr', { class: rowClass }, [
-      el('td', { text: String(row.position) }),
-      el('td', {}, [teamInline(row.team_id)]),
-      el('td', { text: String(row.points) }),
-      el('td', { text: String(row.played) }),
-      el('td', { text: String(row.won) }),
-      el('td', { text: String(row.drawn) }),
-      el('td', { text: String(row.lost) }),
-    ]));
-  });
-  table.append(tbody);
-  return table;
 }
 
 function teamName(teamId) {
