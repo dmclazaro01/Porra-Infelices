@@ -226,7 +226,7 @@ export async function fetchState() {
         if (predictedWinner != null) {
           if (match.winner_team_id) {
             status = predictedWinner === match.winner_team_id ? 'correct' : 'wrong';
-            points = status === 'correct' ? 1 : 0;
+            points = status === 'correct' ? 2 : 0;
           } else {
             status = 'pending';
           }

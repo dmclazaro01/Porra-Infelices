@@ -15,9 +15,9 @@ const RULES = [
   {
     icon: '🏆', title: 'Eliminatorias', color: 'red',
     lines: [
-      'Cada ganador de partido de eliminatoria acertado: +1 punto (fijo, sin importar la ronda).',
-      'Dieciseisavos a final, todas las rondas valen lo mismo: 1 punto por acierto.',
-      'Total: 26 partidos de eliminatoria = 26 puntos máximo.',
+      'Cada ganador de partido de eliminatoria acertado: +2 puntos (fijo, sin importar la ronda).',
+      'Dieciseisavos a final, todas las rondas valen lo mismo: 2 puntos por acierto.',
+      'Total: 32 partidos de eliminatoria = 64 puntos máximo.',
     ],
   },
   {
@@ -67,6 +67,6 @@ export function renderRules() {
     grid.append(card);
   });
   wrap.append(grid);
-  wrap.append(el('p', { class: 'rules-footer', text: 'Puntuación máxima: 114 puntos (60 clasificación + 18 resultados + 26 eliminatorias + 10 bonus).' }));
+  wrap.append(el('p', { class: 'rules-footer', text: 'Puntuación máxima: 152 puntos (60 clasificación + 18 resultados + 64 eliminatorias + 10 bonus).' }));
   return wrap;
 }

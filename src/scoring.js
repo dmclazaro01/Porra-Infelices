@@ -226,7 +226,7 @@ export function computeKnockoutPoints(userKnockoutPredictions, realKnockoutResul
     const predictedWinner = userKnockoutPredictions[matchNumber];
     const realResult = realKnockoutResults[matchNumber];
     if (realResult && realResult.winner_team_id === predictedWinner) {
-      points++;
+      points += 2;
     }
   }
   return points;
