@@ -264,6 +264,14 @@ function renderSettingsPanel(state) {
     checked: lockedValue,
     onchange: () => { lockedValue = lockedCheck.checked; },
   });
+  let koEditableValue = settings.knockout_editable || false;
+  const koEditableId = 'chk-ko-editable';
+  const koEditableCheck = el('input', {
+    id: koEditableId,
+    type: 'checkbox',
+    checked: koEditableValue,
+    onchange: () => { koEditableValue = koEditableCheck.checked; },
+  });
 
   const saveError = el('div', { class: 'error' });
   const saveBtn = el('button', {
@@ -275,6 +283,7 @@ function renderSettingsPanel(state) {
         await api.adminUpdateSettings({
           lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
           locked: lockedValue,
+          knockout_editable: koEditableValue,
           entry_fee_cents: Math.round(Number(feeInput.value) * 100),
         });
         await load();
@@ -296,6 +305,10 @@ function renderSettingsPanel(state) {
     el('div', { class: 'fee-row' }, [
       el('label', { for: lockedCheckId, class: 'fee-label', style: 'cursor:pointer', text: 'Bloqueada:' }),
       lockedCheck,
+    ]),
+    el('div', { class: 'fee-row' }, [
+      el('label', { for: koEditableId, class: 'fee-label', style: 'cursor:pointer', text: 'Eliminatorias editables:' }),
+      koEditableCheck,
     ]),
     saveBtn,
     saveError,

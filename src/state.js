@@ -52,6 +52,13 @@ export function canEditPredictions() {
   return state.profile.is_active && !isLocked();
 }
 
+export function canEditKnockout() {
+  if (!state) return false;
+  // Knockout can be edited independently when knockout_editable is true
+  // Only active players can edit, and only when the setting allows it
+  return state.profile.is_active && state.settings.knockout_editable === true;
+}
+
 function notifyListeners() {
   listeners.forEach(cb => cb(state));
 }

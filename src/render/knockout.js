@@ -1,5 +1,5 @@
 import { el, teamInline } from '../utils.js';
-import { getState, canEditPredictions, isLocked } from '../state.js';
+import { getState, canEditPredictions, canEditKnockout, isLocked, isAdmin } from '../state.js';
 import { saveKnockoutPrediction } from '../api.js';
 import { computeGroupStandings, getBestThirds } from '../scoring.js';
 
@@ -33,8 +33,10 @@ function debounceSaveKnockout(matchNumber, winnerId) {
 
 function renderLockBanner() {
   const locked = isLocked();
+  const koEditable = canEditKnockout();
+  const editable = canEditPredictions() || koEditable;
   const right = el('div', { class: 'lock-banner-right' });
-  if (canEditPredictions()) {
+  if (editable) {
     const saveBtn = el('button', { class: 'force-save', text: '💾 Forzar guardado' });
     saveBtn.addEventListener('click', async () => {
       saveBtn.textContent = '⏳ Guardando...';
@@ -58,11 +60,12 @@ function renderLockBanner() {
     });
     right.append(saveBtn);
   }
-  right.append(el('span', { class: `badge ${canEditPredictions() ? 'open' : 'locked'}`, text: canEditPredictions() ? 'Editable' : 'Sin edición' }));
+  right.append(el('span', { class: `badge ${editable ? 'open' : 'locked'}`, text: koEditable ? 'Eliminatorias editables' : editable ? 'Editable' : 'Sin edición' }));
+  const bannerText = locked ? (koEditable ? 'Solo eliminatorias editables' : 'Porra cerrada') : 'Porra abierta';
   return el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [
     el('div', {}, [
-      el('strong', { text: locked ? 'Porra cerrada' : 'Porra abierta' }),
-      el('span', { text: locked ? 'Lo guardado queda fijo.' : 'Predice los ganadores de cada cruce.' }),
+      el('strong', { text: bannerText }),
+      el('span', { text: koEditable ? 'Puedes modificar las eliminatorias. Grupos y bonus están fijos.' : locked ? 'Lo guardado queda fijo.' : 'Predice los ganadores de cada cruce.' }),
     ]),
     right,
   ]);
@@ -152,9 +155,9 @@ function renderKoMatch(matchData, side) {
     const teamId = matchData[slot];
     card.append(el('button', {
       class: `winner ${matchData.winner === teamId ? 'active' : ''}`,
-      disabled: !canEditPredictions() || !teamId ? 'disabled' : null,
+      disabled: (!canEditPredictions() && !canEditKnockout()) || !teamId ? 'disabled' : null,
       onclick: () => {
-        if (!canEditPredictions() || !teamId) return;
+        if ((!canEditPredictions() && !canEditKnockout()) || !teamId) return;
         knockoutPredictions[matchData.match_number] = teamId;
         debounceSaveKnockout(matchData.match_number, teamId);
         rebuild();
@@ -199,7 +202,7 @@ function buildContent() {
   const groupMatchesCount = state.matches.filter(m => m.stage === 'GROUP').length;
   const filledGroupPredictions = Object.keys(state.predictions || {}).filter(id => state.matches.find(m => m.id === id && m.stage === 'GROUP')).length;
 
-  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0) {
+  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin()) {
     fragment.append(renderLockBanner());
     fragment.append(el('div', { class: 'empty-state' }, [
       el('h2', { text: 'Eliminatorias' }),
