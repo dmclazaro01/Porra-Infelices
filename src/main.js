@@ -185,7 +185,9 @@ function renderTabs() {
   tabs.className = 'tabs';
   const items = [];
   if (!isAdmin()) {
-    items.push(['groups', 'Grupos'], ['bonus', '🏅 Bonus']);
+    items.push(['groups', 'Grupos'], ['knockout', 'Eliminatorias'], ['bonus', '🏅 Bonus']);
+  } else {
+    items.push(['knockout', 'Eliminatorias']);
   }
   items.push(['results', '⚽ Resultados']);
   items.push(['leaderboard', 'Clasificación']);
