@@ -202,7 +202,7 @@ function renderTabs() {
   return tabs;
 }
 
-const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+const SYNC_INTERVAL_MS = 60 * 1000;
 
 async function autoSyncIfStale() {
   const state = getState();
