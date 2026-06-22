@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { computePartialStandings, isBracketComplete } from './bracket.js';
+import { computePartialStandings, isBracketComplete, resolveLabel } from './bracket.js';
 
 const teamsA = [{ id: 't1', name: 'Alpha' }, { id: 't2', name: 'Bravo' }];
 const teamsB = [{ id: 't3', name: 'Charlie' }, { id: 't4', name: 'Delta' }];
@@ -88,4 +88,106 @@ test('isBracketComplete con 16 R32 definidos', () => {
 test('isBracketComplete con partidos R32 que tienen solo home_team_id', () => {
   const matches = [koMatch('M73', 'R32', 't1', null)];
   assert.strictEqual(isBracketComplete({ matches }), false);
+});
+
+const buildState = (overrides = {}) => ({
+  matches: overrides.matches || [],
+  teams: overrides.teams || [
+    { id: 'es', name: 'España' },
+    { id: 'ar', name: 'Argentina' },
+    { id: 'br', name: 'Brasil' },
+  ],
+  groups: overrides.groups || [
+    { letter: 'A', teams: [{ team_id: 'es' }, { team_id: 'ar' }] },
+  ],
+  predictions: overrides.predictions || {},
+  tiebreaks: overrides.tiebreaks || {},
+  knockoutPredictions: overrides.knockoutPredictions || {},
+  ...overrides,
+});
+
+test('resolveLabel 1A en realMode con grupo terminado', () => {
+  const state = buildState({
+    matches: [
+      { id: 'm1', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 2, actual_away_score: 0 },
+      { id: 'm2', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 1, actual_away_score: 1 },
+      { id: 'm3', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 1, actual_away_score: 0 },
+      { id: 'm4', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 0, actual_away_score: 1 },
+      { id: 'm5', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 2, actual_away_score: 0 },
+      { id: 'm6', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 1, actual_away_score: 1 },
+    ],
+  });
+  const result = resolveLabel('1A', state, { realMode: true });
+  assert.strictEqual(result.teamId, 'es');
+  assert.strictEqual(result.provisional, false);
+});
+
+test('resolveLabel 1A en realMode con grupo parcialmente jugado', () => {
+  const state = buildState({
+    matches: [
+      { id: 'm1', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP',
+        actual_home_score: 2, actual_away_score: 0 },
+    ],
+  });
+  const result = resolveLabel('1A', state, { realMode: true });
+  assert.strictEqual(result.teamId, 'es');
+  assert.strictEqual(result.provisional, true);
+});
+
+test('resolveLabel WM73 con winner_team_id presente', () => {
+  const state = buildState({
+    matches: [
+      { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
+        winner_team_id: 'es', home_team_id: 'ar', away_team_id: 'es' },
+    ],
+  });
+  const result = resolveLabel('WM73', state, { realMode: true });
+  assert.strictEqual(result.teamId, 'es');
+});
+
+test('resolveLabel WM73 sin winner_team_id devuelve null', () => {
+  const state = buildState({
+    matches: [
+      { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
+        home_team_id: 'ar', away_team_id: 'es' },
+    ],
+  });
+  const result = resolveLabel('WM73', state, { realMode: true });
+  assert.strictEqual(result.teamId, null);
+});
+
+test('resolveLabel 3ABC devuelve null con reason third_place_undefined', () => {
+  const state = buildState();
+  const result = resolveLabel('3ABC', state, { realMode: true });
+  assert.strictEqual(result.teamId, null);
+  assert.strictEqual(result.reason, 'third_place_undefined');
+});
+
+test('resolveLabel LM101 con winner_team_id presente', () => {
+  const state = buildState({
+    matches: [
+      { id: 'M101', match_number: 'M101', stage: 'KNOCKOUT', round: 'SF',
+        winner_team_id: 'ar', home_team_id: 'es', away_team_id: 'ar' },
+    ],
+  });
+  const result = resolveLabel('LM101', state, { realMode: true });
+  assert.strictEqual(result.teamId, 'es');
+});
+
+test('resolveLabel 2A en realMode false usa predicciones', () => {
+  const state = buildState({
+    predictions: { m1: '2' },
+    tiebreaks: {},
+  });
+  state.matches = [
+    { id: 'm1', home_team_id: 'es', away_team_id: 'ar', group_letter: 'A', stage: 'GROUP' },
+  ];
+  const result = resolveLabel('1A', state, { realMode: false });
+  assert.strictEqual(result.teamId, 'ar');
 });
