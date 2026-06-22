@@ -8,3 +8,10 @@ export function computePartialStandings(letter, groupMatches, ctx) {
   const standings = computeRealStandings(letter, groupMatches);
   return { standings, provisional, playedCount };
 }
+
+export function isBracketComplete(state) {
+  if (!state || !state.matches) return false;
+  const r32 = state.matches.filter(m => m.stage === 'KNOCKOUT' && m.round === 'R32');
+  if (r32.length !== 16) return false;
+  return r32.every(m => m.home_team_id != null && m.away_team_id != null);
+}

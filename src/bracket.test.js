@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { computePartialStandings } from './bracket.js';
+import { computePartialStandings, isBracketComplete } from './bracket.js';
 
 const teamsA = [{ id: 't1', name: 'Alpha' }, { id: 't2', name: 'Bravo' }];
 const teamsB = [{ id: 't3', name: 'Charlie' }, { id: 't4', name: 'Delta' }];
@@ -51,4 +51,41 @@ test('computePartialStandings con 6 partidos jugados no es provisional', () => {
   const result = computePartialStandings('A', matches, { teams });
   assert.strictEqual(result.provisional, false);
   assert.strictEqual(result.standings.length, 4);
+});
+
+const koMatch = (id, round, homeId, awayId) => ({
+  id, match_number: id, round, stage: 'KNOCKOUT',
+  home_team_id: homeId, away_team_id: awayId,
+});
+
+test('isBracketComplete con 0 R32 definidos', () => {
+  const matches = [koMatch('M73', 'R32', null, null)];
+  assert.strictEqual(isBracketComplete({ matches }), false);
+});
+
+test('isBracketComplete con 8 R32 definidos', () => {
+  const matches = [
+    koMatch('M73', 'R32', 't1', 't2'),
+    koMatch('M74', 'R32', 't3', 't4'),
+    koMatch('M75', 'R32', 't5', 't6'),
+    koMatch('M76', 'R32', 't7', 't8'),
+    koMatch('M77', 'R32', 't9', 't10'),
+    koMatch('M78', 'R32', 't11', 't12'),
+    koMatch('M79', 'R32', null, null),
+    koMatch('M80', 'R32', null, null),
+  ];
+  assert.strictEqual(isBracketComplete({ matches }), false);
+});
+
+test('isBracketComplete con 16 R32 definidos', () => {
+  const matches = [];
+  for (let i = 0; i < 16; i++) {
+    matches.push(koMatch(`M${73 + i}`, 'R32', `t${i}a`, `t${i}b`));
+  }
+  assert.strictEqual(isBracketComplete({ matches }), true);
+});
+
+test('isBracketComplete con partidos R32 que tienen solo home_team_id', () => {
+  const matches = [koMatch('M73', 'R32', 't1', null)];
+  assert.strictEqual(isBracketComplete({ matches }), false);
 });
