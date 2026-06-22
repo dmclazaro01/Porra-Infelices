@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { computePartialStandings, isBracketComplete, resolveLabel } from './bracket.js';
+import { computePartialStandings, isBracketComplete, resolveLabel, resolveBracket } from './bracket.js';
 
 const teamsA = [{ id: 't1', name: 'Alpha' }, { id: 't2', name: 'Bravo' }];
 const teamsB = [{ id: 't3', name: 'Charlie' }, { id: 't4', name: 'Delta' }];
@@ -190,4 +190,44 @@ test('resolveLabel 2A en realMode false usa predicciones', () => {
   ];
   const result = resolveLabel('1A', state, { realMode: false });
   assert.strictEqual(result.teamId, 'ar');
+});
+
+test('resolveBracket encadenado R32->R16 con resultados parciales', () => {
+  const matches = [
+    { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
+      home_team_id: 'es', away_team_id: 'ar', winner_team_id: 'es',
+      home_label: '1A', away_label: '2D' },
+    { id: 'M89', match_number: 'M89', stage: 'KNOCKOUT', round: 'R16',
+      home_label: 'WM73', away_label: 'WM74', home_team_id: null, away_team_id: null },
+    { id: 'M74', match_number: 'M74', stage: 'KNOCKOUT', round: 'R32',
+      home_label: '1B', away_label: '2C', home_team_id: null, away_team_id: null },
+  ];
+  const state = { matches, teams: [], groups: [], predictions: {}, tiebreaks: {}, knockoutPredictions: {} };
+  const bracket = resolveBracket(state, { realMode: true });
+  assert.strictEqual(bracket.M73.team_a, 'es');
+  assert.strictEqual(bracket.M73.team_b, 'ar');
+  assert.strictEqual(bracket.M73.winner, 'es');
+  assert.strictEqual(bracket.M89.team_a, 'es');
+  assert.strictEqual(bracket.M89.team_b, null);
+});
+
+test('resolveBracket devuelve label_a y label_b originales', () => {
+  const matches = [
+    { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
+      home_label: '1A', away_label: '2D' },
+  ];
+  const state = { matches, teams: [], groups: [], predictions: {}, tiebreaks: {}, knockoutPredictions: {} };
+  const bracket = resolveBracket(state, { realMode: true });
+  assert.strictEqual(bracket.M73.label_a, '1A');
+  assert.strictEqual(bracket.M73.label_b, '2D');
+});
+
+test('resolveBracket marca provisional si R32 no está completo', () => {
+  const matches = [
+    { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
+      home_label: '1A', away_label: '2D' },
+  ];
+  const state = { matches, teams: [], groups: [], predictions: {}, tiebreaks: {}, knockoutPredictions: {} };
+  const bracket = resolveBracket(state, { realMode: true });
+  assert.strictEqual(bracket.M73.isProvisional, true);
 });

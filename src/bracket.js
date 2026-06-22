@@ -45,6 +45,29 @@ function buildPredictedStandingsMap(state) {
   return map;
 }
 
+export function resolveBracket(state, { realMode }) {
+  const out = {};
+  if (!state || !state.matches) return out;
+  const koMatches = state.matches.filter(m => m.stage === 'KNOCKOUT');
+  const r32Complete = isBracketComplete(state);
+  for (const match of koMatches) {
+    const teamA = match.home_team_id || resolveLabel(match.home_label, state, { realMode }).teamId;
+    const teamB = match.away_team_id || resolveLabel(match.away_label, state, { realMode }).teamId;
+    const winner = realMode ? match.winner_team_id : (state.knockoutPredictions || {})[match.match_number];
+    out[match.match_number] = {
+      team_a: teamA,
+      team_b: teamB,
+      winner: winner || null,
+      status: match.status || 'scheduled',
+      label_a: match.home_label,
+      label_b: match.away_label,
+      round: match.round,
+      isProvisional: !r32Complete,
+    };
+  }
+  return out;
+}
+
 export function resolveLabel(label, state, { realMode }) {
   if (!label || !state) return { teamId: null };
 
