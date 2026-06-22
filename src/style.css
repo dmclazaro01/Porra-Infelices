@@ -317,3 +317,13 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
   .ko-results-block .result-code, .live-board .result-code { display: none; }
   .results-knockout { grid-template-columns: 1fr; }
 }
+
+/* Wcbracket (Cuadro real) */
+.wcbracket-section { min-width: 0; }
+.wc-match { position: relative; background: var(--paper); border: 2px solid var(--rule); min-width: 0; padding: 4px 0; }
+.wc-match-title { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 6px; background: var(--paper-dim); border-bottom: 1px solid var(--rule); font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.wc-match-status { background: var(--navy); color: var(--paper); padding: 1px 5px; font-size: 9px; letter-spacing: 0.5px; }
+.wc-team-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px; min-height: 28px; border-bottom: 1px solid var(--rule); }
+.wc-team-row:last-child { border-bottom: 0; }
+.wc-team-row.winner-team { background: var(--gold); color: var(--ink); font-weight: 900; }
+.wc-provisional-note { padding: 2px 6px; font-size: 9px; font-style: italic; color: var(--red); text-align: center; background: var(--paper-dim); }
