@@ -11,6 +11,7 @@ import { renderLeaderboard } from './render/leaderboard.js';
 import { renderRules } from './render/rules.js';
 import { renderPicks } from './render/picks.js';
 import { renderAdmin } from './render/admin.js';
+import { renderWcBracket } from './render/wcbracket.js';
 
 let activeTab = 'groups';
 
@@ -37,6 +38,7 @@ function render() {
   container.append(renderTabs());
   if (activeTab === 'groups') container.append(renderGroups());
   else if (activeTab === 'knockout') container.append(renderKnockout());
+  else if (activeTab === 'wcbracket') container.append(renderWcBracket());
   else if (activeTab === 'bonus') container.append(renderBonus());
   else if (activeTab === 'results') container.append(renderResults());
   else if (activeTab === 'leaderboard') container.append(renderLeaderboard());
@@ -189,6 +191,7 @@ function renderTabs() {
   } else {
     items.push(['knockout', 'Eliminatorias']);
   }
+  items.push(['wcbracket', '🌍 Cuadro real']);
   items.push(['results', '⚽ Resultados']);
   items.push(['leaderboard', 'Clasificación']);
   items.push(['rules', 'ℹ️ Puntos']);
