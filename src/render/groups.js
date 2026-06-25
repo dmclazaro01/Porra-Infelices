@@ -84,18 +84,45 @@ async function forceSaveAll(btn) {
   }
 }
 
+function getMatchActual(match) {
+  if (match.actual_home_score == null || match.actual_away_score == null) return null;
+  if (match.actual_home_score > match.actual_away_score) return '1';
+  if (match.actual_home_score < match.actual_away_score) return '2';
+  return 'X';
+}
+
 function renderMatchRow(match) {
   const editable = canEditPredictions();
   const pred = predictions[match.id] || null;
-  const row = el('div', { class: 'match-row' });
+  const actual = getMatchActual(match);
+  const played = actual !== null;
+  const correct = played && pred && pred === actual;
+  const wrong = played && pred && pred !== actual;
+  const missed = played && !pred;
+
+  const rowClasses = ['match-row'];
+  if (correct) rowClasses.push('match-correct');
+  else if (wrong) rowClasses.push('match-wrong');
+  else if (missed) rowClasses.push('match-missed');
+  else if (played) rowClasses.push('match-pending-result');
+
+  const row = el('div', { class: rowClasses.join(' '), 'data-match': match.id });
   row.append(el('div', { class: 'team-block right' }, [teamInline(match.home_team_id, match.home_label || 'TBD')]));
   const middle = el('div', { class: 'match-middle' });
   const choices = el('div', { class: 'choices' });
   ['1', 'X', '2'].forEach(outcome => {
     const oddsMap = { '1': match.odds_home_decimal, 'X': match.odds_draw_decimal, '2': match.odds_away_decimal };
     const odds = oddsMap[outcome];
+    const isCorrectChoice = played && actual === outcome;
+    const isWrongChoice = played && pred === outcome && actual !== outcome;
+    const btnClass = [
+      'choice',
+      pred === outcome ? 'active' : '',
+      isCorrectChoice ? 'choice-correct' : '',
+      isWrongChoice ? 'choice-wrong' : '',
+    ].filter(Boolean).join(' ');
     const btn = el('button', {
-      class: `choice ${pred === outcome ? 'active' : ''}`,
+      class: btnClass,
       disabled: !editable ? 'disabled' : null,
       onclick: () => {
         if (!editable) return;
@@ -110,9 +137,30 @@ function renderMatchRow(match) {
     choices.append(btn);
   });
   middle.append(choices);
+
   if (match.kickoff_at) {
     middle.append(el('div', { class: 'match-time', text: new Date(match.kickoff_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }));
   }
+
+  if (played && match.actual_home_score != null && match.actual_away_score != null) {
+    const scoreText = `${match.actual_home_score} - ${match.actual_away_score}`;
+    const mark = correct
+      ? el('span', { class: 'match-mark ok', text: '✓' })
+      : wrong
+        ? el('span', { class: 'match-mark bad', text: '✕' })
+        : el('span', { class: 'match-mark pending', text: '·' });
+    const status = correct
+      ? el('span', { class: 'match-status ok', text: 'Acertado' })
+      : wrong
+        ? el('span', { class: 'match-status bad', text: 'Fallado' })
+        : el('span', { class: 'match-status pending', text: 'Sin pick' });
+    middle.append(el('div', { class: 'match-result' }, [
+      mark,
+      el('span', { class: 'match-score', text: scoreText }),
+      status,
+    ]));
+  }
+
   row.append(middle);
   row.append(el('div', { class: 'team-block left' }, [teamInline(match.away_team_id, match.away_label || 'TBD')]));
   return row;

@@ -122,6 +122,22 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .choice.active .choice-odds { color: var(--gold); }
 .choice.active, .winner.active { background: var(--navy); border-style: inset; color: var(--gold); }
 .match-time { color: var(--muted); font-size: 11px; font-style: italic; text-align: center; }
+.match-result { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 11px; }
+.match-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; font-size: 12px; font-weight: 900; }
+.match-mark.ok { background: var(--green); color: var(--paper); }
+.match-mark.bad { background: var(--red); color: var(--paper); }
+.match-mark.pending { background: var(--bevel-dark); color: var(--paper); }
+.match-score { padding: 1px 6px; background: var(--frame); color: var(--gold); }
+.match-status { text-transform: uppercase; letter-spacing: 0.3px; }
+.match-status.ok { color: var(--green); }
+.match-status.bad { color: var(--red); }
+.match-status.pending { color: var(--muted); }
+.match-row.match-correct { background: rgba(0, 102, 0, 0.08); border-left: 4px solid var(--green); padding-left: 8px; }
+.match-row.match-wrong { background: rgba(204, 0, 0, 0.08); border-left: 4px solid var(--red); padding-left: 8px; }
+.match-row.match-missed { background: rgba(85, 85, 85, 0.06); border-left: 4px solid var(--muted); padding-left: 8px; }
+.match-row.match-pending-result { border-left: 4px dashed var(--bevel-dark); padding-left: 8px; }
+.choice.choice-correct { background: var(--green); color: var(--paper); border-style: inset; }
+.choice.choice-wrong { background: var(--red); color: var(--paper); border-style: inset; opacity: 0.85; }
 
 .standings, .leaderboard, .admin-table { width: 100%; border-collapse: collapse; background: var(--paper); border: 2px solid var(--rule); }
 .standings { font-size: 13px; }
