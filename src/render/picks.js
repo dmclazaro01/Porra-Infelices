@@ -171,6 +171,7 @@ let selectedIdB = null;
 
 function renderModeToggle(onChange) {
   const toggle = el('div', { class: 'picks-mode-toggle' });
+  const buttons = {};
   ['single', 'compare'].forEach(m => {
     const btn = el('button', {
       class: `mode-btn ${mode === m ? 'active' : ''}`,
@@ -179,8 +180,12 @@ function renderModeToggle(onChange) {
     btn.addEventListener('click', () => {
       if (mode === m) return;
       mode = m;
+      // Update the active class on the toggle itself so the highlight switches
+      // synchronously — rebuilding the host below only repaints the content.
+      Object.entries(buttons).forEach(([key, b]) => b.classList.toggle('active', key === m));
       onChange();
     });
+    buttons[m] = btn;
     toggle.append(btn);
   });
   return toggle;
