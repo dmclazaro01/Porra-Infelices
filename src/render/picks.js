@@ -12,7 +12,7 @@ function resultMark(item) {
 
 function renderGroupPickRow(item) {
   const hasResult = item.actual_home_score != null;
-  return el('div', { class: `pick-row pick-${item.status}` }, [
+  return el('div', { class: 'pick-row' }, [
     el('div', { class: 'pick-match' }, [
       teamInline(item.home_team_id),
       el('span', { class: 'versus', text: 'vs' }),
@@ -25,7 +25,7 @@ function renderGroupPickRow(item) {
 }
 
 function renderKnockoutPickRow(item) {
-  return el('div', { class: `pick-row pick-${item.status}` }, [
+  return el('div', { class: 'pick-row' }, [
     el('div', { class: 'pick-match' }, [
       el('span', { class: 'match-code', text: item.match_number }),
       item.predicted_winner ? teamInline(item.predicted_winner) : el('span', { text: 'Sin ganador' }),
@@ -49,7 +49,7 @@ function renderPickDetail(entry) {
   if (entry.details?.bonus?.length) {
     detail.append(el('div', { class: 'detail-section' }, [
       el('h3', { text: 'Bonus' }),
-      ...entry.details.bonus.map(item => el('div', { class: `pick-row pick-${item.status}` }, [
+      ...entry.details.bonus.map(item => el('div', { class: 'pick-row' }, [
         el('div', { class: 'pick-match' }, [el('span', { text: item.label })]),
         el('div', { class: 'pick-value', text: item.predicted || '—' }),
         resultMark(item),

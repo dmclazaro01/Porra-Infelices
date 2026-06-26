@@ -87,15 +87,34 @@ async function forceSaveAll(btn) {
 function renderMatchRow(match) {
   const editable = canEditPredictions();
   const pred = predictions[match.id] || null;
-  const row = el('div', { class: 'match-row' });
+  const hasResult = match.actual_home_score != null && match.actual_away_score != null;
+  const realResult = hasResult
+    ? (match.actual_home_score > match.actual_away_score ? '1'
+        : match.actual_home_score < match.actual_away_score ? '2' : 'X')
+    : null;
+  // Highlight class: only meaningful once the real result is in.
+  let status = '';
+  if (hasResult && pred) status = pred === realResult ? 'is-correct' : 'is-wrong';
+  else if (hasResult && !pred) status = 'is-missed';
+  const row = el('div', { class: `match-row ${status}` });
   row.append(el('div', { class: 'team-block right' }, [teamInline(match.home_team_id, match.home_label || 'TBD')]));
   const middle = el('div', { class: 'match-middle' });
   const choices = el('div', { class: 'choices' });
   ['1', 'X', '2'].forEach(outcome => {
     const oddsMap = { '1': match.odds_home_decimal, 'X': match.odds_draw_decimal, '2': match.odds_away_decimal };
     const odds = oddsMap[outcome];
+    // After the match is finished, mark the actual outcome on the row and the
+    // user's pick as correct/wrong; before that, the user can still toggle.
+    const isReal = hasResult && outcome === realResult;
+    const isPick = pred === outcome;
+    let cls = 'choice';
+    if (isPick) cls += ' active';
+    if (hasResult) {
+      if (isReal) cls += ' real';
+      if (isPick) cls += pred === realResult ? ' pick-correct' : ' pick-wrong';
+    }
     const btn = el('button', {
-      class: `choice ${pred === outcome ? 'active' : ''}`,
+      class: cls,
       disabled: !editable ? 'disabled' : null,
       onclick: () => {
         if (!editable) return;
@@ -110,7 +129,15 @@ function renderMatchRow(match) {
     choices.append(btn);
   });
   middle.append(choices);
-  if (match.kickoff_at) {
+  if (hasResult) {
+    middle.append(el('div', { class: 'match-score', text: `${match.actual_home_score} – ${match.actual_away_score}` }));
+    if (pred) {
+      middle.append(el('div', { class: `match-verdict ${pred === realResult ? 'ok' : 'bad'}` },
+        [pred === realResult ? '✓ +0.25' : '✕ +0']));
+    } else {
+      middle.append(el('div', { class: 'match-verdict pending', text: 'Sin pick' }));
+    }
+  } else if (match.kickoff_at) {
     middle.append(el('div', { class: 'match-time', text: new Date(match.kickoff_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }));
   }
   row.append(middle);

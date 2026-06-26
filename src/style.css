@@ -190,8 +190,32 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .result-mark.ok { background: var(--green); color: var(--paper); }
 .result-mark.bad { background: var(--red); color: var(--paper); }
 .result-mark.pending { background: var(--bevel-face); color: var(--ink); }
-.pick-row.pick-correct { border-left: 4px solid var(--green); background: color-mix(in srgb, var(--green) 12%, var(--paper-dim)); }
-.pick-row.pick-wrong { border-left: 4px solid var(--red); background: color-mix(in srgb, var(--red) 12%, var(--paper-dim)); }
+.match-row.is-correct { border-left: 4px solid var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
+.match-row.is-wrong { border-left: 4px solid var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+.match-row.is-missed { border-left: 4px solid var(--rule); background: color-mix(in srgb, var(--rule) 8%, transparent); }
+.choice.real { outline: 2px solid var(--green); outline-offset: -2px; }
+.choice.pick-correct { background: var(--green); color: var(--paper); }
+.choice.pick-wrong { background: var(--red); color: var(--paper); }
+.match-score { font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 900; text-align: center; margin-top: 4px; }
+.match-verdict { font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 900; text-align: center; margin-top: 2px; padding: 2px 6px; display: inline-block; align-self: center; }
+.match-verdict.ok { color: var(--green); }
+.match-verdict.bad { color: var(--red); }
+.match-verdict.pending { color: var(--muted); }
+
+.breakdown-panel { display: grid; gap: 8px; padding: 12px 14px; }
+.breakdown-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+.breakdown-row:last-of-type { border-bottom: none; }
+.breakdown-label { font-weight: 900; }
+.breakdown-detail { color: var(--muted); font-size: 12px; }
+.breakdown-points { font-family: "Arial Black", Helvetica, Arial, sans-serif; font-weight: 900; min-width: 60px; text-align: right; }
+.breakdown-total { border-top: 2px solid var(--ink); padding-top: 8px; font-size: 16px; }
+.breakdown-total .breakdown-points { font-size: 18px; }
+.breakdown-subtitle { margin: 8px 0 4px; color: var(--navy); text-transform: uppercase; font-size: 13px; }
+.breakdown-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.breakdown-table th, .breakdown-table td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: center; }
+.breakdown-table th:first-child, .breakdown-table td:first-child { text-align: left; font-weight: 900; }
+.breakdown-table th:last-child, .breakdown-table td:last-child { text-align: right; font-weight: 900; }
+.breakdown-total-row td { background: var(--paper-dim); border-top: 2px solid var(--ink); }
 
 .pot-blocks { display: grid; gap: 14px; }
 .pot-block { display: grid; gap: 8px; }
