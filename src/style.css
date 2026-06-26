@@ -217,6 +217,30 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .breakdown-table th:last-child, .breakdown-table td:last-child { text-align: right; font-weight: 900; }
 .breakdown-total-row td { background: var(--paper-dim); border-top: 2px solid var(--ink); }
 
+.picks-mode-toggle { display: inline-flex; gap: 0; margin: 8px 0; border: 1px solid var(--rule); }
+.mode-btn { padding: 8px 14px; background: var(--paper); border: none; font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 12px; cursor: pointer; }
+.mode-btn.active { background: var(--ink); color: var(--paper); }
+.mode-btn + .mode-btn { border-left: 1px solid var(--rule); }
+.compare-selectors { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+.compare-select-wrap { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+.compare-select-label { font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--muted); }
+.compare-select { padding: 6px 10px; border: 1px solid var(--rule); background: var(--paper); font-family: inherit; }
+.compare-summary { padding: 12px 14px; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.compare-table th { text-align: center; padding: 6px 8px; border-bottom: 2px solid var(--ink); font-family: "Arial Black", Helvetica, Arial, sans-serif; }
+.compare-table th:first-child { text-align: left; }
+.compare-table td { padding: 8px; border-bottom: 1px solid var(--rule); }
+.cmp-label { font-weight: 900; }
+.cmp-hint { font-size: 11px; color: var(--muted); }
+.cmp-cell { text-align: center; font-family: "Arial Black", Helvetica, Arial, sans-serif; font-weight: 900; }
+.cmp-cell.cmp-win { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--ink); }
+.cmp-cell.cmp-lose { background: color-mix(in srgb, var(--rule) 12%, transparent); color: var(--muted); }
+.compare-table tr.cmp-total td { border-top: 2px solid var(--ink); background: var(--paper-dim); font-size: 15px; }
+.compare-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 720px) {
+  .compare-columns { grid-template-columns: 1fr; }
+}
+
 .pot-blocks { display: grid; gap: 14px; }
 .pot-block { display: grid; gap: 8px; }
 .pot-block-title .group-chip { font-size: 13px; padding: 4px 12px; }
