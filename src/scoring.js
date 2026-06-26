@@ -181,11 +181,10 @@ export function computeGroupPoints(
         userPredictions,
         userTiebreaks
       );
-      const realStandings = computeGroupStandings(
-        group.letter,
-        groupMatches,
-        realResults
-      );
+      // Real standings must use the actual scores (goal difference / goals for
+      // count as tiebreakers), not the 1/X/2 reduction which would flatten every
+      // result to 1-0 and produce a wrong real classification.
+      const realStandings = computeRealStandings(group.letter, groupMatches);
 
       const userClassified = userStandings
         .filter((t) => t.position <= 2)
@@ -316,9 +315,9 @@ export function computeTotalPoints(userId, state) {
 
   const realKnockoutResults = {};
   for (const match of matches) {
-    if (!match.group_letter && match.winner_team_id) {
+    if (!match.group_letter && match.actual_winner_team_id) {
       realKnockoutResults[match.match_number] = {
-        winner_team_id: match.winner_team_id,
+        winner_team_id: match.actual_winner_team_id,
       };
     }
   }

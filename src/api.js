@@ -224,8 +224,8 @@ export async function fetchState() {
         const predictedWinner = userKnockout[match.match_number];
         let status = 'missing', points = 0;
         if (predictedWinner != null) {
-          if (match.winner_team_id) {
-            status = predictedWinner === match.winner_team_id ? 'correct' : 'wrong';
+          if (match.actual_winner_team_id) {
+            status = predictedWinner === match.actual_winner_team_id ? 'correct' : 'wrong';
             points = status === 'correct' ? 2 : 0;
           } else {
             status = 'pending';

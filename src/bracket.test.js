@@ -140,18 +140,18 @@ test('resolveLabel 1A en realMode con grupo parcialmente jugado', () => {
   assert.strictEqual(result.provisional, true);
 });
 
-test('resolveLabel WM73 con winner_team_id presente', () => {
+test('resolveLabel WM73 con actual_winner_team_id presente', () => {
   const state = buildState({
     matches: [
       { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
-        winner_team_id: 'es', home_team_id: 'ar', away_team_id: 'es' },
+        actual_winner_team_id: 'es', home_team_id: 'ar', away_team_id: 'es' },
     ],
   });
   const result = resolveLabel('WM73', state, { realMode: true });
   assert.strictEqual(result.teamId, 'es');
 });
 
-test('resolveLabel WM73 sin winner_team_id devuelve null', () => {
+test('resolveLabel WM73 sin actual_winner_team_id devuelve null', () => {
   const state = buildState({
     matches: [
       { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
@@ -169,11 +169,11 @@ test('resolveLabel 3ABC devuelve null con reason third_place_undefined', () => {
   assert.strictEqual(result.reason, 'third_place_undefined');
 });
 
-test('resolveLabel LM101 con winner_team_id presente', () => {
+test('resolveLabel LM101 con actual_winner_team_id presente', () => {
   const state = buildState({
     matches: [
       { id: 'M101', match_number: 'M101', stage: 'KNOCKOUT', round: 'SF',
-        winner_team_id: 'ar', home_team_id: 'es', away_team_id: 'ar' },
+        actual_winner_team_id: 'ar', home_team_id: 'es', away_team_id: 'ar' },
     ],
   });
   const result = resolveLabel('LM101', state, { realMode: true });
@@ -195,7 +195,7 @@ test('resolveLabel 2A en realMode false usa predicciones', () => {
 test('resolveBracket encadenado R32->R16 con resultados parciales', () => {
   const matches = [
     { id: 'M73', match_number: 'M73', stage: 'KNOCKOUT', round: 'R32',
-      home_team_id: 'es', away_team_id: 'ar', winner_team_id: 'es',
+      home_team_id: 'es', away_team_id: 'ar', actual_winner_team_id: 'es',
       home_label: '1A', away_label: '2D' },
     { id: 'M89', match_number: 'M89', stage: 'KNOCKOUT', round: 'R16',
       home_label: 'WM73', away_label: 'WM74', home_team_id: null, away_team_id: null },

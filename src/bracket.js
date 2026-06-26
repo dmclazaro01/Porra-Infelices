@@ -53,7 +53,7 @@ export function resolveBracket(state, { realMode }) {
   for (const match of koMatches) {
     const teamA = match.home_team_id || resolveLabel(match.home_label, state, { realMode }).teamId;
     const teamB = match.away_team_id || resolveLabel(match.away_label, state, { realMode }).teamId;
-    const winner = realMode ? match.winner_team_id : (state.knockoutPredictions || {})[match.match_number];
+    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[match.match_number];
     out[match.match_number] = {
       team_a: teamA,
       team_b: teamB,
@@ -75,7 +75,7 @@ export function resolveLabel(label, state, { realMode }) {
     const mn = label.substring(1);
     const match = (state.matches || []).find(m => m.match_number === mn);
     if (!match) return { teamId: null };
-    const winner = realMode ? match.winner_team_id : (state.knockoutPredictions || {})[mn];
+    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[mn];
     return { teamId: winner || null };
   }
 
@@ -83,7 +83,7 @@ export function resolveLabel(label, state, { realMode }) {
     const mn = label.substring(1);
     const match = (state.matches || []).find(m => m.match_number === mn);
     if (!match) return { teamId: null };
-    const winner = realMode ? match.winner_team_id : (state.knockoutPredictions || {})[mn];
+    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[mn];
     if (!winner) return { teamId: null };
     if (match.home_team_id === winner) return { teamId: match.away_team_id };
     if (match.away_team_id === winner) return { teamId: match.home_team_id };
