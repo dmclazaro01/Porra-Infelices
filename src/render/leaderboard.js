@@ -32,7 +32,7 @@ function renderMyBreakdown(state) {
     table.append(el('thead', {}, [
       el('tr', {}, [
         el('th', { text: 'Grupo' }),
-        el('th', { text: 'Clasificados', title: '1 punto por cada equipo (1º o 2º) acertado' }),
+        el('th', { text: 'Clasificados', title: '1 punto por cada equipo predicho como 1º o 2º que realmente queda top-2 o entre los 8 mejores terceros' }),
         el('th', { text: 'Posición exacta', title: '1 punto por acertar quién es 1º y quién 2º' }),
         el('th', { text: 'Orden completo', title: '1 punto si aciertas el orden de los 4 equipos' }),
         el('th', { text: 'Total' }),

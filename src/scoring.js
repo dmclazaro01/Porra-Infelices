@@ -158,6 +158,32 @@ export function getBestThirds(allGroups, groupMatches, predictionsOrResults) {
   return thirds.slice(0, 8).map((t) => t.team_id);
 }
 
+// Best 8 third-place teams across the 12 groups, based on real scores. Only
+// includes groups that are already fully played — partial groups can't have a
+// determined 3rd place yet. The list grows as more groups finish.
+export function getRealBestThirdsSoFar(allGroups, allMatches) {
+  const thirds = [];
+  for (const group of allGroups) {
+    const matches = allMatches.filter((m) => m.group_letter === group.letter);
+    const allPlayed = matches.length > 0 && matches.every(
+      (m) => m.actual_home_score != null && m.actual_away_score != null
+    );
+    if (!allPlayed) continue;
+    const standings = computeRealStandings(group.letter, matches);
+    const third = standings.find((t) => t.position === 3);
+    if (third) thirds.push(third);
+  }
+  thirds.sort((a, b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    const gdA = a.goals_for - a.goals_against;
+    const gdB = b.goals_for - b.goals_against;
+    if (gdA !== gdB) return gdB - gdA;
+    if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
+    return a.team_id.localeCompare(b.team_id);
+  });
+  return thirds.slice(0, 8).map((t) => t.team_id);
+}
+
 export function computeGroupPoints(
   userPredictions,
   allMatches,
@@ -167,6 +193,7 @@ export function computeGroupPoints(
 ) {
   let total = 0;
   const details = [];
+  const bestThirdsSet = new Set(getRealBestThirdsSoFar(allGroups, allMatches));
 
   for (const group of allGroups) {
     const groupMatches = allMatches.filter((m) => m.group_letter === group.letter);
@@ -189,12 +216,14 @@ export function computeGroupPoints(
       const userClassified = userStandings
         .filter((t) => t.position <= 2)
         .map((t) => t.team_id);
-      const realClassified = realStandings
-        .filter((t) => t.position <= 2)
-        .map((t) => t.team_id);
+      const realClassifiedSet = new Set(
+        realStandings.filter((t) => t.position <= 2).map((t) => t.team_id)
+      );
 
+      // A predicted top-2 counts as classified if the team really finished
+      // top-2 OR is among the 8 best thirds (which also advance in WC26).
       for (const teamId of userClassified) {
-        if (realClassified.includes(teamId)) classified++;
+        if (realClassifiedSet.has(teamId) || bestThirdsSet.has(teamId)) classified++;
       }
 
       const userFirst = userStandings.find((t) => t.position === 1);

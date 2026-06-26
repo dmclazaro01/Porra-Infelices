@@ -143,7 +143,7 @@ function renderComparisonSummary(entryA, entryB, state) {
   );
   row(
     'Países clasificados',
-    'En grupos finalizados · 1 c/u',
+    'Top-2 reales + mejores terceros · 1 c/u',
     `${sa.classified}/${sa.classifiedPossible} · +${sa.classified}`,
     `${sb.classified}/${sb.classifiedPossible} · +${sb.classified}`,
     sa.classified, sb.classified,
