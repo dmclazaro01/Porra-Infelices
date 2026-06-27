@@ -199,15 +199,15 @@ function renderFinalBracketAssistant(state) {
   ]));
 
   const intro = el('p', { class: 'muted-line' });
+  let introText = 'Todos los grupos jugados. Pendiente de cubrir los terceros y/o el resto de cruces de dieciseisavos.';
   if (!allGroupsPlayed) {
-    intro.textContent = `Fase de grupos: ${pendingGroups.length} grupo(s) aún sin terminar. Los mejores terceros se calculan cuando todos los grupos estén jugados.`;
+    introText = `Fase de grupos: ${pendingGroups.length} grupo(s) aún sin terminar. Los mejores terceros se calculan cuando todos los grupos estén jugados.`;
   } else if (thirdPlaceSlots.length === 0 && bracketComplete) {
-    intro.textContent = 'Cuadro completo. Los jugadores podrán predecir en cuanto actives "Eliminatorias editables" en Configuración.';
+    introText = 'Cuadro completo. Los jugadores podrán predecir en cuanto actives "Eliminatorias editables" en Configuración.';
   } else if (thirdPlaceSlots.length > 0) {
-    intro.textContent = `Asigna los ${thirdPlaceSlots.length} cruce(s) de terceros pendientes. Las sugerencias se calculan desde los grupos ya jugados.`;
-  } else {
-    intro.textContent = 'Todos los grupos jugados. Pendiente de cubrir los terceros y/o el resto de cruces de dieciseisavos.';
+    introText = `Asigna los ${thirdPlaceSlots.length} cruce(s) de terceros pendientes. Las sugerencias se calculan desde los grupos ya jugados.`;
   }
+  intro.textContent = introText;
   panel.append(intro);
 
   const groupsBlock = el('div', { class: 'assistant-block' });
