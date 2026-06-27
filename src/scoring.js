@@ -158,6 +158,32 @@ export function getBestThirds(allGroups, groupMatches, predictionsOrResults) {
   return thirds.slice(0, 8).map((t) => t.team_id);
 }
 
+// Best 8 third-place teams across the 12 groups, based on real scores. Only
+// includes groups that are already fully played — partial groups can't have a
+// determined 3rd place yet. The list grows as more groups finish.
+export function getRealBestThirdsSoFar(allGroups, allMatches) {
+  const thirds = [];
+  for (const group of allGroups) {
+    const matches = allMatches.filter((m) => m.group_letter === group.letter);
+    const allPlayed = matches.length > 0 && matches.every(
+      (m) => m.actual_home_score != null && m.actual_away_score != null
+    );
+    if (!allPlayed) continue;
+    const standings = computeRealStandings(group.letter, matches);
+    const third = standings.find((t) => t.position === 3);
+    if (third) thirds.push(third);
+  }
+  thirds.sort((a, b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    const gdA = a.goals_for - a.goals_against;
+    const gdB = b.goals_for - b.goals_against;
+    if (gdA !== gdB) return gdB - gdA;
+    if (a.goals_for !== b.goals_for) return b.goals_for - a.goals_for;
+    return a.team_id.localeCompare(b.team_id);
+  });
+  return thirds.slice(0, 8).map((t) => t.team_id);
+}
+
 export function computeGroupPoints(
   userPredictions,
   allMatches,
@@ -167,6 +193,7 @@ export function computeGroupPoints(
 ) {
   let total = 0;
   const details = [];
+  const bestThirdsSet = new Set(getRealBestThirdsSoFar(allGroups, allMatches));
 
   for (const group of allGroups) {
     const groupMatches = allMatches.filter((m) => m.group_letter === group.letter);
@@ -181,21 +208,22 @@ export function computeGroupPoints(
         userPredictions,
         userTiebreaks
       );
-      const realStandings = computeGroupStandings(
-        group.letter,
-        groupMatches,
-        realResults
-      );
+      // Real standings must use the actual scores (goal difference / goals for
+      // count as tiebreakers), not the 1/X/2 reduction which would flatten every
+      // result to 1-0 and produce a wrong real classification.
+      const realStandings = computeRealStandings(group.letter, groupMatches);
 
       const userClassified = userStandings
         .filter((t) => t.position <= 2)
         .map((t) => t.team_id);
-      const realClassified = realStandings
-        .filter((t) => t.position <= 2)
-        .map((t) => t.team_id);
+      const realClassifiedSet = new Set(
+        realStandings.filter((t) => t.position <= 2).map((t) => t.team_id)
+      );
 
+      // A predicted top-2 counts as classified if the team really finished
+      // top-2 OR is among the 8 best thirds (which also advance in WC26).
       for (const teamId of userClassified) {
-        if (realClassified.includes(teamId)) classified++;
+        if (realClassifiedSet.has(teamId) || bestThirdsSet.has(teamId)) classified++;
       }
 
       const userFirst = userStandings.find((t) => t.position === 1);
@@ -237,6 +265,97 @@ export function computeBonusPoints(userBonus, realTopScorer, realBestPlayer) {
   if (userBonus.top_scorer && userBonus.top_scorer === realTopScorer) points += 5;
   if (userBonus.best_player && userBonus.best_player === realBestPlayer) points += 5;
   return points;
+}
+
+export function computePointsBreakdown(userId, state) {
+  const {
+    allGroupPredictions,
+    allTiebreakPredictions,
+    allKnockoutPredictions,
+    allBonusPredictions,
+    matches,
+    bonusAnswers,
+    groupsT,
+  } = state;
+
+  const userGroupPredictions = {};
+  for (const pred of allGroupPredictions || []) {
+    if (pred.user_id === userId) userGroupPredictions[pred.match_id] = pred.prediction;
+  }
+  const userTiebreaks = {};
+  for (const tb of allTiebreakPredictions || []) {
+    if (tb.user_id === userId) userTiebreaks[tb.group_letter] = tb.team_order;
+  }
+
+  const realResults = {};
+  for (const match of matches) {
+    if (match.actual_home_score != null && match.actual_away_score != null && match.group_letter) {
+      realResults[match.id] = match.actual_home_score > match.actual_away_score ? '1'
+        : match.actual_home_score < match.actual_away_score ? '2' : 'X';
+    }
+  }
+
+  const allGroups = (groupsT || []).map(g => ({
+    letter: g.letter,
+    team_ids: (g.teams || []).map(t => t.team_id),
+  }));
+
+  const groupBonus = computeGroupPoints(userGroupPredictions, matches, allGroups, userTiebreaks, realResults);
+
+  // Per-group breakdown enriched with played/total counts so the UI can show
+  // which groups are already settled vs in progress.
+  const groupDetails = groupBonus.details.map(d => {
+    const gMatches = matches.filter(m => m.group_letter === d.group);
+    const played = gMatches.filter(m => m.actual_home_score != null && m.actual_away_score != null).length;
+    return { ...d, played, total: gMatches.length };
+  });
+
+  let matchHits = 0, matchPossible = 0;
+  for (const match of matches) {
+    if (!match.group_letter) continue;
+    if (match.actual_home_score == null || match.actual_away_score == null) continue;
+    matchPossible++;
+    const realResult = match.actual_home_score > match.actual_away_score ? '1'
+      : match.actual_home_score < match.actual_away_score ? '2' : 'X';
+    if (userGroupPredictions[match.id] === realResult) matchHits++;
+  }
+  const matchResultPoints = matchHits * 0.25;
+
+  const userKnockoutPredictions = {};
+  for (const pred of allKnockoutPredictions || []) {
+    if (pred.user_id === userId) userKnockoutPredictions[pred.match_number] = pred.winner_team_id;
+  }
+  let koHits = 0, koPossible = 0;
+  for (const match of matches) {
+    if (match.group_letter) continue;
+    if (!match.actual_winner_team_id) continue;
+    koPossible++;
+    if (userKnockoutPredictions[match.match_number] === match.actual_winner_team_id) koHits++;
+  }
+  const knockoutPoints = koHits * 2;
+
+  const userBonus = (allBonusPredictions || []).find(b => b.user_id === userId) || {};
+  const bonus = {
+    top_scorer: {
+      predicted: userBonus.top_scorer || null,
+      correct: !!(userBonus.top_scorer && bonusAnswers && userBonus.top_scorer === bonusAnswers.top_scorer),
+      revealed: !!(bonusAnswers && bonusAnswers.top_scorer),
+    },
+    best_player: {
+      predicted: userBonus.best_player || null,
+      correct: !!(userBonus.best_player && bonusAnswers && userBonus.best_player === bonusAnswers.best_player),
+      revealed: !!(bonusAnswers && bonusAnswers.best_player),
+    },
+  };
+  const bonusPoints = (bonus.top_scorer.correct ? 5 : 0) + (bonus.best_player.correct ? 5 : 0);
+
+  return {
+    matchResults: { hits: matchHits, possible: matchPossible, points: matchResultPoints },
+    groups: { details: groupDetails, points: groupBonus.total },
+    knockout: { hits: koHits, possible: koPossible, points: knockoutPoints },
+    bonus: { ...bonus, points: bonusPoints },
+    total: matchResultPoints + groupBonus.total + knockoutPoints + bonusPoints,
+  };
 }
 
 export function computeTotalPoints(userId, state) {
@@ -316,9 +435,9 @@ export function computeTotalPoints(userId, state) {
 
   const realKnockoutResults = {};
   for (const match of matches) {
-    if (!match.group_letter && match.winner_team_id) {
+    if (!match.group_letter && match.actual_winner_team_id) {
       realKnockoutResults[match.match_number] = {
-        winner_team_id: match.winner_team_id,
+        winner_team_id: match.actual_winner_team_id,
       };
     }
   }

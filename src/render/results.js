@@ -1,19 +1,15 @@
 import { el, teamInline, formatDate, groupMatches } from '../utils.js';
 import { getState } from '../state.js';
-import { computeGroupStandings } from '../scoring.js';
+import { computeRealStandings } from '../scoring.js';
 
 function computeRealStandingsForGroup(letter, matches) {
   const state = getState();
   const group = state.groups.find(g => g.letter === letter);
   if (!group) return el('div');
-  const realResults = {};
-  for (const m of matches) {
-    if (m.status !== 'finished' && m.actual_home_score === null) continue;
-    if (m.actual_home_score > m.actual_away_score) realResults[m.id] = '1';
-    else if (m.actual_home_score < m.actual_away_score) realResults[m.id] = '2';
-    else realResults[m.id] = 'X';
-  }
-  const standings = computeGroupStandings(letter, matches, realResults, null);
+  // Use the real scores directly so goal difference and goals-for are taken into
+  // account for the standings order. The previous 1/X/2 reduction flattened every
+  // win to 1-0, breaking the real classification (and downstream points).
+  const standings = computeRealStandings(letter, matches);
   const table = el('table', { class: 'standings' });
   table.append(el('thead', {}, [
     el('tr', {}, ['#', 'Equipo', 'Pts', 'PJ', 'G', 'E', 'P'].map(h => el('th', { text: h }))),

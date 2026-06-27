@@ -1,5 +1,97 @@
 import { el, formatDate, formatMoney, groupChip, paymentPill } from '../utils.js';
 import { getState, isAdmin } from '../state.js';
+import { computePointsBreakdown } from '../scoring.js';
+
+function fmtPts(n) {
+  const r = Math.round(n * 100) / 100;
+  return Number.isInteger(r) ? String(r) : r.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function renderMyBreakdown(state) {
+  const me = state.profile?.id;
+  if (!me) return null;
+  const breakdown = computePointsBreakdown(me, state);
+  const panel = el('article', { class: 'panel breakdown-panel' });
+  panel.append(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'panel-title', text: `Tus puntos · ${fmtPts(breakdown.total)}` }),
+    el('span', { class: 'badge', text: `${breakdown.matchResults.hits + breakdown.knockout.hits} aciertos` }),
+  ]));
+
+  // Match-by-match (1/X/2) summary
+  panel.append(el('div', { class: 'breakdown-row' }, [
+    el('span', { class: 'breakdown-label', text: 'Aciertos 1/X/2 en grupos' }),
+    el('span', { class: 'breakdown-detail', text: `${breakdown.matchResults.hits}/${breakdown.matchResults.possible} · 0.25 c/u` }),
+    el('span', { class: 'breakdown-points', text: `+${fmtPts(breakdown.matchResults.points)}` }),
+  ]));
+
+  // Group breakdown (only finished groups contribute, but show in-progress too)
+  const finished = breakdown.groups.details.filter(d => d.played === d.total);
+  if (finished.length) {
+    panel.append(el('h3', { class: 'breakdown-subtitle', text: 'Grupos finalizados' }));
+    const table = el('table', { class: 'breakdown-table' });
+    table.append(el('thead', {}, [
+      el('tr', {}, [
+        el('th', { text: 'Grupo' }),
+        el('th', { text: 'Clasificados', title: '1 punto por cada equipo predicho como 1º o 2º que realmente queda top-2 o entre los 8 mejores terceros' }),
+        el('th', { text: 'Posición exacta', title: '1 punto por acertar quién es 1º y quién 2º' }),
+        el('th', { text: 'Orden completo', title: '1 punto si aciertas el orden de los 4 equipos' }),
+        el('th', { text: 'Total' }),
+      ]),
+    ]));
+    const tbody = el('tbody');
+    finished.forEach(d => {
+      const sub = d.classified + d.exact + d.fullOrder;
+      tbody.append(el('tr', {}, [
+        el('td', { text: d.group }),
+        el('td', { text: `${d.classified}/2` }),
+        el('td', { text: `${d.exact}/2` }),
+        el('td', { text: d.fullOrder ? '✓' : '—' }),
+        el('td', { text: `+${sub}` }),
+      ]));
+    });
+    tbody.append(el('tr', { class: 'breakdown-total-row' }, [
+      el('td', { text: 'Subtotal' }),
+      el('td', { text: '' }),
+      el('td', { text: '' }),
+      el('td', { text: '' }),
+      el('td', { text: `+${breakdown.groups.points}` }),
+    ]));
+    table.append(tbody);
+    panel.append(table);
+  } else {
+    panel.append(el('div', { class: 'breakdown-row' }, [
+      el('span', { class: 'breakdown-label', text: 'Bonus por grupos finalizados' }),
+      el('span', { class: 'breakdown-detail', text: 'Sin grupos cerrados aún' }),
+      el('span', { class: 'breakdown-points', text: '+0' }),
+    ]));
+  }
+
+  // Knockout
+  panel.append(el('div', { class: 'breakdown-row' }, [
+    el('span', { class: 'breakdown-label', text: 'Aciertos eliminatorias' }),
+    el('span', { class: 'breakdown-detail', text: `${breakdown.knockout.hits}/${breakdown.knockout.possible} · 2 c/u` }),
+    el('span', { class: 'breakdown-points', text: `+${breakdown.knockout.points}` }),
+  ]));
+
+  // Bonus
+  const b = breakdown.bonus;
+  const bonusBits = [];
+  if (b.top_scorer.revealed) bonusBits.push(`Goleador ${b.top_scorer.correct ? '✓' : '✕'}`);
+  if (b.best_player.revealed) bonusBits.push(`Mejor jugador ${b.best_player.correct ? '✓' : '✕'}`);
+  panel.append(el('div', { class: 'breakdown-row' }, [
+    el('span', { class: 'breakdown-label', text: 'Bonus (goleador / mejor jugador)' }),
+    el('span', { class: 'breakdown-detail', text: bonusBits.length ? bonusBits.join(' · ') : 'Sin revelar' }),
+    el('span', { class: 'breakdown-points', text: `+${breakdown.bonus.points}` }),
+  ]));
+
+  panel.append(el('div', { class: 'breakdown-row breakdown-total' }, [
+    el('span', { class: 'breakdown-label', text: 'Total' }),
+    el('span', { class: 'breakdown-detail', text: '' }),
+    el('span', { class: 'breakdown-points', text: fmtPts(breakdown.total) }),
+  ]));
+
+  return panel;
+}
 
 function metricCard(label, value, hint) {
   return el('div', { class: 'metric-card' }, [
@@ -76,6 +168,9 @@ export function renderLeaderboard() {
       el('p', { text: 'Ranking, bote y reparto.' }),
     ]),
   ]));
+
+  const myBreakdown = renderMyBreakdown(state);
+  if (myBreakdown) wrap.append(myBreakdown);
 
   wrap.append(renderPrizePool(state));
 

@@ -1,7 +1,7 @@
 import { el, teamInline } from '../utils.js';
 import { getState, canEditPredictions, canEditKnockout, isLocked, isAdmin } from '../state.js';
 import { saveKnockoutPrediction } from '../api.js';
-import { computeGroupStandings, getBestThirds } from '../scoring.js';
+import { resolveBracket, isBracketComplete } from '../bracket.js';
 
 const BONUS_POINTS_INFO = 5;
 
@@ -71,77 +71,22 @@ function renderLockBanner() {
   ]);
 }
 
-function buildBracket(state) {
-  const standingsByGroup = {};
-  const groups = state.groups || [];
-  for (const group of groups) {
-    const matches = state.matches.filter(m => m.group_letter === group.letter && m.stage === 'GROUP');
-    standingsByGroup[group.letter] = computeGroupStandings(group.letter, matches, state.predictions || {}, state.tiebreaks || {});
-  }
-
-  const groupWinners = {};
-  const groupRunnersUp = {};
-  const groupThirds = {};
-  for (const [letter, standings] of Object.entries(standingsByGroup)) {
-    if (standings.length >= 1) groupWinners[letter] = standings[0].team_id;
-    if (standings.length >= 2) groupRunnersUp[letter] = standings[1].team_id;
-    if (standings.length >= 3) groupThirds[letter] = standings[2].team_id;
-  }
-
-  const bestThirds = getBestThirds(groups, state.matches.filter(m => m.stage === 'GROUP'), state.predictions || {}, state.tiebreaks || {});
-
-  const bracket = {};
-  const stateMatches = state.matches || [];
-  const matchMap = {};
-  stateMatches.forEach(m => { matchMap[m.match_number] = m; });
-
-  function resolveTeam(label) {
-    if (!label) return null;
-    if (label.startsWith('W') && label.length >= 4) {
-      const mn = label.substring(1);
-      if (knockoutPredictions[mn]) return knockoutPredictions[mn];
-      return null;
-    }
-    if (label.startsWith('L') && label.length >= 4) {
-      const mn = label.substring(1);
-      const winner = knockoutPredictions[mn];
-      if (!winner || !matchMap[mn]) return null;
-      const match = matchMap[mn];
-      return match.home_team_id === winner ? match.away_team_id : match.home_team_id;
-    }
-    if (/^[12][A-L]$/.test(label)) {
-      const pos = label[0];
-      const grp = label[1];
-      return pos === '1' ? groupWinners[grp] : groupRunnersUp[grp];
-    }
-    if (label.startsWith('3')) {
-      return bestThirds[0] || null;
-    }
-    return null;
-  }
-
-  function getKnockoutMatch(mn) {
-    const match = matchMap[mn];
-    if (!match) return null;
-    const teamA = match.home_team_id || resolveTeam(match.home_label);
-    const teamB = match.away_team_id || resolveTeam(match.away_label);
-    const winner = knockoutPredictions[mn] || null;
-    const nextMatch = match.round === 'FINAL' ? null : match.round;
-    return {
+function buildBracketFromModule(state) {
+  const resolved = resolveBracket(state, { realMode: false });
+  const result = {};
+  for (const [mn, data] of Object.entries(resolved)) {
+    result[mn] = {
       match_number: mn,
-      round: match.round,
-      label_a: match.home_label,
-      label_b: match.away_label,
-      team_a: teamA,
-      team_b: teamB,
-      winner: winner,
-      next: nextMatch,
+      round: data.round,
+      label_a: data.label_a,
+      label_b: data.label_b,
+      team_a: data.team_a,
+      team_b: data.team_b,
+      winner: data.winner,
+      next: data.round === 'FINAL' ? null : data.round,
     };
   }
-
-  const allMatchNumbers = stateMatches.filter(m => m.stage === 'KNOCKOUT').map(m => m.match_number);
-  allMatchNumbers.forEach(mn => { bracket[mn] = getKnockoutMatch(mn); });
-  return bracket;
+  return result;
 }
 
 function renderKoMatch(matchData, side) {
@@ -206,12 +151,12 @@ function buildContent() {
     fragment.append(renderLockBanner());
     fragment.append(el('div', { class: 'empty-state' }, [
       el('h2', { text: 'Eliminatorias' }),
-      el('p', { text: 'Completa todos los grupos para abrir el cuadro.' }),
+      el('p', { text: 'Esperando a que se cierre el cuadro real. Se activará automáticamente cuando los 16 cruces de dieciseisavos estén definidos y el admin habilite "Eliminatorias editables".' }),
     ]));
     return fragment;
   }
 
-  const bracket = buildBracket(state);
+  const bracket = buildBracketFromModule(state);
   fragment.append(renderLockBanner());
   fragment.append(el('div', { class: 'section-heading' }, [
     el('div', {}, [

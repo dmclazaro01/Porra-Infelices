@@ -180,12 +180,92 @@ function renderMatchResults(state) {
 
   if (koMatches.length) {
     panel.append(el('h3', { class: 'results-block-title', text: 'Eliminatorias' }));
+    panel.append(el('p', { class: 'muted-line', text: 'Asigna los equipos de cada cruce y el ganador. Los cruces de mejores terceros (3ABC, 3DEF…) no se calculan solos: usa el cuadro de la BBC como referencia y corrígelos aquí si hace falta.' }));
     koMatches.forEach(match => {
-      panel.append(renderAdminMatchRow(match));
+      panel.append(renderAdminKnockoutRow(match, state.teams || []));
     });
   }
 
   return panel;
+}
+
+function teamSelect(teams, selected, fallbackLabel) {
+  const sel = el('select', { style: 'flex:1;min-width:0' });
+  sel.append(el('option', { value: '', text: fallbackLabel ? `(auto: ${fallbackLabel})` : '(por definir)' }));
+  teams.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(t => {
+    const opt = el('option', { value: t.id, text: `${t.flag || ''} ${t.name}`.trim() });
+    if (selected === t.id) opt.selected = true;
+    sel.append(opt);
+  });
+  return sel;
+}
+
+function renderAdminKnockoutRow(match, teams) {
+  const row = el('div', { class: 'result-row admin-ko-row', style: 'grid-template-columns: 44px 1fr 50px 50px 1fr 1fr auto; gap:6px; align-items:center' });
+  row.append(el('div', { class: 'result-code', text: match.match_number }));
+
+  const homeSel = teamSelect(teams, match.home_team_id, match.home_label);
+  const awaySel = teamSelect(teams, match.away_team_id, match.away_label);
+  const homeInput = el('input', { type: 'number', min: '0', max: '99', value: match.actual_home_score ?? '', placeholder: '-', style: 'width:46px' });
+  const awayInput = el('input', { type: 'number', min: '0', max: '99', value: match.actual_away_score ?? '', placeholder: '-', style: 'width:46px' });
+
+  const statusSelect = el('select', {});
+  ['scheduled', 'live', 'finished'].forEach(s => {
+    const opt = el('option', { value: s, text: s === 'scheduled' ? 'Programado' : s === 'live' ? 'En vivo' : 'Terminado' });
+    if (match.status === s) opt.selected = true;
+    statusSelect.append(opt);
+  });
+
+  const winnerSel = el('select', {});
+  function refreshWinner() {
+    const prev = winnerSel.value || match.actual_winner_team_id || '';
+    winnerSel.textContent = '';
+    winnerSel.append(el('option', { value: '', text: 'Ganador: auto' }));
+    [homeSel.value, awaySel.value].forEach(tid => {
+      if (!tid) return;
+      const t = teams.find(x => x.id === tid);
+      const opt = el('option', { value: tid, text: `🏆 ${t ? t.name : tid}` });
+      if (prev === tid) opt.selected = true;
+      winnerSel.append(opt);
+    });
+  }
+  refreshWinner();
+  homeSel.addEventListener('change', refreshWinner);
+  awaySel.addEventListener('change', refreshWinner);
+
+  const saveBtn = el('button', {
+    class: 'small-action',
+    text: '💾',
+    onclick: async () => {
+      const hs = homeInput.value !== '' ? Number(homeInput.value) : null;
+      const as = awayInput.value !== '' ? Number(awayInput.value) : null;
+      let winner = winnerSel.value || null;
+      // Auto-derive the winner from the score when it is decisive and none was picked.
+      if (!winner && hs != null && as != null && hs !== as) {
+        winner = hs > as ? (homeSel.value || null) : (awaySel.value || null);
+      }
+      saveBtn.textContent = '⏳';
+      saveBtn.disabled = true;
+      try {
+        await api.adminUpdateMatch(match.id, {
+          home_team_id: homeSel.value || null,
+          away_team_id: awaySel.value || null,
+          actual_home_score: hs,
+          actual_away_score: as,
+          actual_winner_team_id: winner,
+          status: statusSelect.value,
+        });
+        await load();
+      } catch (e) {
+        saveBtn.textContent = '❌';
+        setTimeout(() => { saveBtn.textContent = '💾'; saveBtn.disabled = false; }, 2500);
+        return;
+      }
+    },
+  });
+
+  row.append(homeSel, homeInput, awayInput, awaySel, winnerSel, statusSelect, saveBtn);
+  return row;
 }
 
 function renderAdminMatchRow(match) {
