@@ -12,8 +12,63 @@ const BBC_ROUND_MAP: Record<string, string> = {
   'Quarter-finals': 'QF',
   'Semi-finals': 'SF',
   'Third place': 'THIRD',
+  '3rd Place Final': 'THIRD',
   'Final': 'FINAL',
 };
+
+// Knockout bracket for the 2026 World Cup according to BBC Sport ordering.
+// M73-M88 are the Last 32 matches in the exact order BBC returns them.
+const KNOCKOUT_SLOTS = [
+  { id: 'M73',  round: 'R32',  home_label: '1E',    away_label: '3ABCDF' },
+  { id: 'M74',  round: 'R32',  home_label: '1I',    away_label: '3CDFGH' },
+  { id: 'M75',  round: 'R32',  home_label: '2A',    away_label: '2B' },
+  { id: 'M76',  round: 'R32',  home_label: '1F',    away_label: '2C' },
+  { id: 'M77',  round: 'R32',  home_label: '2K',    away_label: '2L' },
+  { id: 'M78',  round: 'R32',  home_label: '1H',    away_label: '2J' },
+  { id: 'M79',  round: 'R32',  home_label: '1D',    away_label: '3BEFIJ' },
+  { id: 'M80',  round: 'R32',  home_label: '1G',    away_label: '3AEHIJ' },
+  { id: 'M81',  round: 'R32',  home_label: '1C',    away_label: '2F' },
+  { id: 'M82',  round: 'R32',  home_label: '2E',    away_label: '2I' },
+  { id: 'M83',  round: 'R32',  home_label: '1A',    away_label: '3CEFHI' },
+  { id: 'M84',  round: 'R32',  home_label: '1L',    away_label: '3EHIJK' },
+  { id: 'M85',  round: 'R32',  home_label: '1J',    away_label: '2H' },
+  { id: 'M86',  round: 'R32',  home_label: '2D',    away_label: '2G' },
+  { id: 'M87',  round: 'R32',  home_label: '1B',    away_label: '3EFGIJ' },
+  { id: 'M88',  round: 'R32',  home_label: '1K',    away_label: '3DEIJL' },
+  { id: 'M89',  round: 'R16',  home_label: 'WM74',  away_label: 'WM77' },
+  { id: 'M90',  round: 'R16',  home_label: 'WM73',  away_label: 'WM75' },
+  { id: 'M91',  round: 'R16',  home_label: 'WM83',  away_label: 'WM84' },
+  { id: 'M92',  round: 'R16',  home_label: 'WM81',  away_label: 'WM82' },
+  { id: 'M93',  round: 'R16',  home_label: 'WM76',  away_label: 'WM78' },
+  { id: 'M94',  round: 'R16',  home_label: 'WM79',  away_label: 'WM80' },
+  { id: 'M95',  round: 'R16',  home_label: 'WM86',  away_label: 'WM88' },
+  { id: 'M96',  round: 'R16',  home_label: 'WM85',  away_label: 'WM87' },
+  { id: 'M97',  round: 'QF',   home_label: 'WM89',  away_label: 'WM90' },
+  { id: 'M98',  round: 'QF',   home_label: 'WM93',  away_label: 'WM94' },
+  { id: 'M99',  round: 'QF',   home_label: 'WM91',  away_label: 'WM92' },
+  { id: 'M100', round: 'QF',   home_label: 'WM95',  away_label: 'WM96' },
+  { id: 'M101', round: 'SF',   home_label: 'WM97',  away_label: 'WM98' },
+  { id: 'M102', round: 'SF',   home_label: 'WM99',  away_label: 'WM100' },
+  { id: 'M103', round: 'THIRD', home_label: 'LM101', away_label: 'LM102' },
+  { id: 'M104', round: 'FINAL', home_label: 'WM101', away_label: 'WM102' },
+];
+
+async function ensureKnockoutSlots(supabase: any) {
+  const rows = KNOCKOUT_SLOTS.map(s => ({
+    id: s.id,
+    match_number: s.id,
+    round: s.round,
+    stage: 'KNOCKOUT',
+    home_label: s.home_label,
+    away_label: s.away_label,
+    status: 'scheduled',
+  }));
+
+  const { error } = await supabase.from('matches').upsert(rows, { onConflict: 'id' });
+  if (error) throw new Error(`Failed to seed knockout slots: ${error.message}`);
+  console.log(`Ensured ${rows.length} knockout slots`);
+  return rows.length;
+}
 
 Deno.serve(async (req) => {
   if (!SUPABASE_SERVICE_KEY) {
@@ -23,6 +78,15 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   try {
+    const debug = {
+      knockoutMatchCount: 0,
+      bbcMatchCount: 0,
+      seededSlots: 0,
+    };
+
+    // Ensure knockout match slots exist (seed once)
+    debug.seededSlots = await ensureKnockoutSlots(supabase);
+
     // Fetch team code mapping from our DB
     const { data: teams } = await supabase.from('teams').select('id, code');
     if (!teams) throw new Error('No teams found');
@@ -140,8 +204,10 @@ Deno.serve(async (req) => {
 
       const html = await bbcResponse.text();
       const bbcMatches = parseBBCKnockoutMatches(html);
+      debug.bbcMatchCount = bbcMatches.length;
 
       const knockoutMatches = ourMatches.filter(m => m.stage === 'KNOCKOUT');
+      debug.knockoutMatchCount = knockoutMatches.length;
 
       for (const bm of bbcMatches) {
         const roundCode = BBC_ROUND_MAP[bm.roundName];
@@ -225,6 +291,7 @@ Deno.serve(async (req) => {
       knockoutUpdates,
       apiError,
       bbcError,
+      debug,
       syncAt: new Date().toISOString(),
     }), {
       headers: { 'Content-Type': 'application/json' },
@@ -300,7 +367,9 @@ function parseBBCKnockoutMatches(html: string): BBCMatch[] {
   const ks = tournamentData.data.knockoutStage;
   const out: BBCMatch[] = [];
 
-  for (const round of ks.preFinalRounds || []) {
+  // BBC uses different property names depending on the response; support both.
+  const rounds = ks.preFinalRounds || ks.rounds || [];
+  for (const round of rounds) {
     for (const m of round.matches || []) {
       const evt = m.event;
       if (!evt) continue;
@@ -309,13 +378,15 @@ function parseBBCKnockoutMatches(html: string): BBCMatch[] {
     }
   }
 
-  if (ks.thirdPlacePlayoff?.event) {
-    const parsed = parseBBCEvent(ks.thirdPlacePlayoff.event, 'Third place');
+  const thirdPlaceEvent = ks.thirdPlacePlayoff?.match?.event || ks.thirdPlacePlayoff?.event;
+  if (thirdPlaceEvent) {
+    const parsed = parseBBCEvent(thirdPlaceEvent, '3rd Place Final');
     if (parsed) out.push(parsed);
   }
 
-  if (ks.final?.event) {
-    const parsed = parseBBCEvent(ks.final.event, 'Final');
+  const finalEvent = ks.final?.match?.event || ks.final?.event;
+  if (finalEvent) {
+    const parsed = parseBBCEvent(finalEvent, 'Final');
     if (parsed) out.push(parsed);
   }
 
@@ -370,18 +441,12 @@ function parseScore(v: any): number | null {
 }
 
 function resolveBBCTeam(team: BBCTeam, codeToId: Record<string, string>): ResolvedTeam {
-  if (team.code) {
-    const id = codeToId[team.code];
-    if (id) return { teamId: id, label: null };
-  }
+  const teamId = team.code ? codeToId[team.code] || null : null;
 
   // Convert BBC placeholder like "E1" to our label "1E"
-  if (team.placeholder) {
-    const label = normalizePlaceholder(team.placeholder);
-    if (label) return { teamId: null, label };
-  }
+  const label = team.placeholder ? normalizePlaceholder(team.placeholder) : null;
 
-  return { teamId: null, label: null };
+  return { teamId, label };
 }
 
 function normalizePlaceholder(placeholder: string): string | null {
@@ -395,14 +460,44 @@ function normalizePlaceholder(placeholder: string): string | null {
   const digitFirst = /^([12])([A-L])$/.exec(placeholder);
   if (digitFirst) return placeholder;
 
-  // Third-place placeholders: e.g. "ABCDF3" -> try to map to our 3XXX labels
-  // Our labels are: 3ABC, 3DEF, 3GHI, 3JKL, 3ABCD, 3EFGH, 3IJKL, 3EFGH2
+  // Third-place placeholders: e.g. "ABCDF3" -> "3ABCDF"
   const thirdMatch = /^([A-L]+)(3)$/.exec(placeholder);
   if (thirdMatch) {
     const letters = thirdMatch[1];
     const digit = thirdMatch[2];
-    // Return the letters as they appear so we can attempt fuzzy matching later
     return `${digit}${letters}`;
+  }
+
+  // BBC winner/loser placeholders mapped to our match-number labels.
+  // Slots are seeded in the exact order BBC returns them.
+  const winner32 = /^W-32-(\d+)$/.exec(placeholder);
+  if (winner32) {
+    const n = parseInt(winner32[1], 10);
+    if (n >= 1 && n <= 16) return `WM${72 + n}`;
+  }
+
+  const winner16 = /^W-16-(\d+)$/.exec(placeholder);
+  if (winner16) {
+    const n = parseInt(winner16[1], 10);
+    if (n >= 1 && n <= 8) return `WM${88 + n}`;
+  }
+
+  const winnerQF = /^W-QF-(\d+)$/.exec(placeholder);
+  if (winnerQF) {
+    const n = parseInt(winnerQF[1], 10);
+    if (n >= 1 && n <= 4) return `WM${96 + n}`;
+  }
+
+  const winnerSF = /^W-SF-(\d+)$/.exec(placeholder);
+  if (winnerSF) {
+    const n = parseInt(winnerSF[1], 10);
+    if (n >= 1 && n <= 2) return `WM${100 + n}`;
+  }
+
+  const loserSF = /^L-SF-(\d+)$/.exec(placeholder);
+  if (loserSF) {
+    const n = parseInt(loserSF[1], 10);
+    if (n >= 1 && n <= 2) return `LM${100 + n}`;
   }
 
   return null;
@@ -441,7 +536,8 @@ function findKnockoutMatch(
     if (byOneTeam) return byOneTeam;
   }
 
-  // Strategy 3: match by labels (placeholders)
+  // Strategy 3: match by labels (placeholders). Also used as a fallback when
+  // BBC already shows real team names but our DB still has placeholder labels.
   if (home.label || away.label) {
     const byLabels = matches.find(m =>
       m.round === roundCode &&
