@@ -109,3 +109,41 @@ export function resolveLabel(label, state, { realMode }) {
 
   return { teamId: null };
 }
+
+// Parsea una etiqueta de tercero tipo '3ABC' en la lista de letras de grupo
+// que componen el cruce. Devuelve [] si la etiqueta no encaja con el formato.
+export function parseThirdLabel(label) {
+  if (!label || typeof label !== 'string' || !label.startsWith('3')) return [];
+  const m = label.match(/^3([A-L]+)$/);
+  if (!m) return [];
+  return m[1].split('');
+}
+
+// Devuelve el team_id del tercer clasificado real de un grupo, o null si el
+// grupo aún no se ha jugado completo.
+export function getRealThirdForGroup(letter, allMatches) {
+  const groupMatches = (allMatches || []).filter(
+    m => m.group_letter === letter && m.stage === 'GROUP'
+  );
+  if (groupMatches.length === 0) return null;
+  const allPlayed = groupMatches.every(
+    m => m.actual_home_score != null && m.actual_away_score != null
+  );
+  if (!allPlayed) return null;
+  const standings = computeRealStandings(letter, groupMatches);
+  const third = standings.find(t => t.position === 3);
+  return third ? third.team_id : null;
+}
+
+// Para una etiqueta de tercero, devuelve:
+//   - teamId: el candidato "principal" (primer grupo con tercero disponible)
+//   - candidates: lista con { group, teamId } de los grupos que forman la etiqueta
+//     y cuyo tercero ya está calculado. Si ninguno está disponible, teamId será null.
+export function suggestThirdForLabel(label, state) {
+  const groups = parseThirdLabel(label);
+  if (groups.length === 0) return { teamId: null, candidates: [] };
+  const candidates = groups
+    .map(g => ({ group: g, teamId: getRealThirdForGroup(g, state.matches || []) }))
+    .filter(c => c.teamId);
+  return { teamId: candidates[0]?.teamId || null, candidates };
+}

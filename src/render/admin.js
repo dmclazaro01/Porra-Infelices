@@ -1,6 +1,8 @@
-import { el, formatDate, groupChip, formatMoney, paymentPill } from '../utils.js';
+import { el, formatDate, groupChip, formatMoney, paymentPill, teamInline } from '../utils.js';
 import { getState, load } from '../state.js';
 import * as api from '../api.js';
+import { isBracketComplete, parseThirdLabel, suggestThirdForLabel } from '../bracket.js';
+import { getRealBestThirdsSoFar } from '../scoring.js';
 
 export function renderAdmin() {
   const state = getState();
@@ -14,6 +16,7 @@ export function renderAdmin() {
 
   wrap.append(renderGroupManagement(state));
   wrap.append(renderPlayerManagement(state));
+  wrap.append(renderFinalBracketAssistant(state));
   wrap.append(renderMatchResults(state));
   wrap.append(renderSettingsPanel(state));
   wrap.append(renderSyncPanel(state));
@@ -144,6 +147,205 @@ function renderPlayerManagement(state) {
   table.append(tbody);
   panel.append(table);
   panel.append(playerError);
+  return panel;
+}
+
+function renderFinalBracketAssistant(state) {
+  const allGroups = state.groups || [];
+  const groupLetters = allGroups.map(g => g.letter).sort();
+
+  const groupStatus = groupLetters.map(letter => {
+    const matches = state.matches.filter(m => m.group_letter === letter && m.stage === 'GROUP');
+    const played = matches.filter(m => m.actual_home_score != null && m.actual_away_score != null).length;
+    return {
+      letter,
+      played,
+      total: matches.length,
+      complete: matches.length > 0 && played === matches.length,
+    };
+  });
+  const pendingGroups = groupStatus.filter(g => !g.complete);
+  const allGroupsPlayed = groupStatus.length > 0 && pendingGroups.length === 0;
+
+  const r32Matches = state.matches.filter(m => m.stage === 'KNOCKOUT' && m.round === 'R32');
+  const r32CompleteCount = r32Matches.filter(m => m.home_team_id && m.away_team_id).length;
+  const bracketComplete = isBracketComplete(state);
+
+  const bestThirds = allGroupsPlayed ? getRealBestThirdsSoFar(allGroups, state.matches) : [];
+
+  const thirdPlaceSlots = [];
+  r32Matches.forEach(match => {
+    [['home_label', 'home_team_id'], ['away_label', 'away_team_id']].forEach(([labelKey, idKey]) => {
+      const label = match[labelKey];
+      const id = match[idKey];
+      if (label && label.startsWith('3') && !id) {
+        thirdPlaceSlots.push({
+          match,
+          slot: idKey,
+          label,
+          suggestion: suggestThirdForLabel(label, state),
+        });
+      }
+    });
+  });
+
+  const panel = el('article', { class: 'panel final-bracket-assistant' });
+  panel.append(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'panel-title', text: 'Asistente de cuadro final' }),
+    el('span', {
+      class: `badge ${bracketComplete ? 'open' : 'locked'}`,
+      text: bracketComplete ? 'Cuadro completo' : `${r32CompleteCount}/16 R32 definidos`,
+    }),
+  ]));
+
+  const intro = el('p', { class: 'muted-line' });
+  if (!allGroupsPlayed) {
+    intro.textContent = `Fase de grupos: ${pendingGroups.length} grupo(s) aún sin terminar. Los mejores terceros se calculan cuando todos los grupos estén jugados.`;
+  } else if (thirdPlaceSlots.length === 0 && bracketComplete) {
+    intro.textContent = 'Cuadro completo. Los jugadores podrán predecir en cuanto actives "Eliminatorias editables" en Configuración.';
+  } else if (thirdPlaceSlots.length > 0) {
+    intro.textContent = `Asigna los ${thirdPlaceSlots.length} cruce(s) de terceros pendientes. Las sugerencias se calculan desde los grupos ya jugados.`;
+  } else {
+    intro.textContent = 'Todos los grupos jugados. Pendiente de cubrir los terceros y/o el resto de cruces de dieciseisavos.';
+  }
+  panel.append(intro);
+
+  const groupsBlock = el('div', { class: 'assistant-block' });
+  groupsBlock.append(el('h3', { text: 'Estado de la fase de grupos' }));
+  const groupsGrid = el('div', { class: 'assistant-groups-grid' });
+  groupStatus.forEach(g => {
+    groupsGrid.append(el('div', {
+      class: `assistant-group ${g.complete ? 'is-complete' : 'is-pending'}`,
+    }, [
+      el('span', { class: 'assistant-group-letter', text: g.letter }),
+      el('span', { class: 'assistant-group-status', text: `${g.played}/${g.total}` }),
+    ]));
+  });
+  groupsBlock.append(groupsGrid);
+  panel.append(groupsBlock);
+
+  if (allGroupsPlayed) {
+    const thirdsBlock = el('div', { class: 'assistant-block' });
+    thirdsBlock.append(el('h3', { text: '8 mejores terceros' }));
+    if (bestThirds.length === 0) {
+      thirdsBlock.append(el('p', { class: 'muted-line', text: 'No se pudieron calcular terceros (revisa los resultados).' }));
+    } else {
+      const thirdsList = el('div', { class: 'assistant-thirds-list' });
+      bestThirds.forEach(tid => thirdsList.append(el('div', { class: 'assistant-third-row' }, [teamInline(tid)])));
+      thirdsBlock.append(thirdsList);
+    }
+    panel.append(thirdsBlock);
+  }
+
+  if (thirdPlaceSlots.length > 0) {
+    const slotsBlock = el('div', { class: 'assistant-block' });
+    slotsBlock.append(el('h3', { text: `Terceros pendientes (${thirdPlaceSlots.length})` }));
+    const list = el('div', { class: 'assistant-slots-list' });
+
+    const applyAllBtn = el('button', {
+      class: 'primary',
+      text: '✨ Aplicar todas las sugerencias',
+    });
+    applyAllBtn.disabled = thirdPlaceSlots.every(s => !s.suggestion.teamId);
+    const status = el('div', { class: 'assistant-slots-status' });
+    applyAllBtn.addEventListener('click', async () => {
+      const targets = thirdPlaceSlots.filter(s => s.suggestion.teamId);
+      if (!targets.length) return;
+      applyAllBtn.disabled = true;
+      applyAllBtn.textContent = '⏳ Aplicando...';
+      try {
+        for (const slot of targets) {
+          await api.adminUpdateMatch(slot.match.id, { [slot.slot]: slot.suggestion.teamId });
+        }
+        await load();
+        status.textContent = '✓ Sugerencias aplicadas';
+        status.style.color = 'var(--green)';
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+        status.style.color = 'var(--red)';
+      }
+    });
+    slotsBlock.append(applyAllBtn, status);
+
+    thirdPlaceSlots.forEach(slot => {
+      const row = el('div', { class: 'assistant-slot-row' });
+      row.append(el('div', { class: 'assistant-slot-label' }, [
+        el('strong', { text: `M${slot.match.match_number || slot.match.id}` }),
+        el('span', { text: ` ${slot.slot === 'home_team_id' ? 'local' : 'visitante'} · etiqueta ${slot.label}` }),
+      ]));
+      const sel = el('select', { class: 'assistant-slot-select' });
+      sel.append(el('option', { value: '', text: '(por asignar)' }));
+      const seen = new Set();
+      const addOption = (tid, label) => {
+        if (!tid || seen.has(tid)) return;
+        seen.add(tid);
+        const team = (state.teams || []).find(t => t.id === tid);
+        sel.append(el('option', { value: tid, text: `${team ? team.flag || '' : ''} ${team ? team.name : tid} — ${label}`.trim() }));
+      };
+      if (slot.suggestion.teamId) {
+        addOption(slot.suggestion.teamId, 'sugerencia principal');
+      }
+      slot.suggestion.candidates.forEach(c => {
+        if (c.teamId === slot.suggestion.teamId) return;
+        addOption(c.teamId, `3º grupo ${c.group}`);
+      });
+      (state.teams || [])
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(t => addOption(t.id, 'todos los equipos'));
+      const rowStatus = el('div', { class: 'assistant-slot-status' });
+      sel.addEventListener('change', async () => {
+        const tid = sel.value || null;
+        sel.disabled = true;
+        rowStatus.textContent = '⏳';
+        try {
+          await api.adminUpdateMatch(slot.match.id, { [slot.slot]: tid });
+          await load();
+          rowStatus.textContent = '✓';
+          rowStatus.style.color = 'var(--green)';
+        } catch (e) {
+          rowStatus.textContent = '❌ ' + e.message;
+          rowStatus.style.color = 'var(--red)';
+          sel.disabled = false;
+        }
+      });
+      row.append(sel, rowStatus);
+      list.append(row);
+    });
+    slotsBlock.append(list);
+    panel.append(slotsBlock);
+  }
+
+  if (bracketComplete && !state.settings?.knockout_editable) {
+    const activateBlock = el('div', { class: 'assistant-block assistant-activate' });
+    const activateBtn = el('button', {
+      class: 'primary',
+      text: '🔓 Activar eliminatorias para jugadores',
+    });
+    const activateStatus = el('div', { class: 'assistant-slots-status' });
+    activateBtn.addEventListener('click', async () => {
+      activateBtn.disabled = true;
+      activateBtn.textContent = '⏳ Activando...';
+      try {
+        await api.adminUpdateSettings({ knockout_editable: true });
+        await load();
+        activateStatus.textContent = '✓ Predicciones de eliminatorias abiertas';
+        activateStatus.style.color = 'var(--green)';
+      } catch (e) {
+        activateStatus.textContent = 'Error: ' + e.message;
+        activateStatus.style.color = 'var(--red)';
+        activateBtn.disabled = false;
+        activateBtn.textContent = '🔓 Activar eliminatorias para jugadores';
+      }
+    });
+    activateBlock.append(activateBtn, activateStatus);
+    panel.append(activateBlock);
+  } else if (state.settings?.knockout_editable) {
+    const activated = el('div', { class: 'assistant-block assistant-activated' });
+    activated.append(el('p', { text: '✅ Eliminatorias editables: los jugadores ya pueden predecir.' }));
+    panel.append(activated);
+  }
+
   return panel;
 }
 

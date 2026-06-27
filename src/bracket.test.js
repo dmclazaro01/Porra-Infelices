@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { computePartialStandings, isBracketComplete, resolveLabel, resolveBracket } from './bracket.js';
+import {
+  computePartialStandings,
+  isBracketComplete,
+  resolveLabel,
+  resolveBracket,
+  parseThirdLabel,
+  getRealThirdForGroup,
+  suggestThirdForLabel,
+} from './bracket.js';
 
 const teamsA = [{ id: 't1', name: 'Alpha' }, { id: 't2', name: 'Bravo' }];
 const teamsB = [{ id: 't3', name: 'Charlie' }, { id: 't4', name: 'Delta' }];
@@ -230,4 +238,79 @@ test('resolveBracket marca provisional si R32 no está completo', () => {
   const state = { matches, teams: [], groups: [], predictions: {}, tiebreaks: {}, knockoutPredictions: {} };
   const bracket = resolveBracket(state, { realMode: true });
   assert.strictEqual(bracket.M73.isProvisional, true);
+});
+
+// --- Helpers de terceros ---
+
+test('parseThirdLabel con formato 3ABC devuelve [A,B,C]', () => {
+  assert.deepStrictEqual(parseThirdLabel('3ABC'), ['A', 'B', 'C']);
+});
+
+test('parseThirdLabel con un solo grupo', () => {
+  assert.deepStrictEqual(parseThirdLabel('3A'), ['A']);
+});
+
+test('parseThirdLabel ignora letras fuera de A-L', () => {
+  assert.deepStrictEqual(parseThirdLabel('3ABC'), ['A', 'B', 'C']);
+  assert.deepStrictEqual(parseThirdLabel('3X'), []);
+});
+
+test('parseThirdLabel devuelve [] para entradas inválidas', () => {
+  assert.deepStrictEqual(parseThirdLabel(''), []);
+  assert.deepStrictEqual(parseThirdLabel(null), []);
+  assert.deepStrictEqual(parseThirdLabel('1A'), []);
+  assert.deepStrictEqual(parseThirdLabel('2B'), []);
+  assert.deepStrictEqual(parseThirdLabel('3'), []);
+});
+
+const groupMatch = (id, group, home, away, hs, as) => ({
+  id, group_letter: group, stage: 'GROUP', match_number: id,
+  home_team_id: home, away_team_id: away,
+  actual_home_score: hs, actual_away_score: as,
+});
+
+// Grupo A: t1 gana todo (9 pts), t2 segundo (6 pts), t3 tercero (3 pts), t4 último (0 pts)
+const playedA = [
+  groupMatch('a1', 'A', 't1', 't2', 1, 0),
+  groupMatch('a2', 'A', 't1', 't3', 1, 0),
+  groupMatch('a3', 'A', 't1', 't4', 1, 0),
+  groupMatch('a4', 'A', 't2', 't3', 1, 0),
+  groupMatch('a5', 'A', 't2', 't4', 1, 0),
+  groupMatch('a6', 'A', 't3', 't4', 1, 0),
+];
+
+test('getRealThirdForGroup devuelve el tercer clasificado real', () => {
+  assert.strictEqual(getRealThirdForGroup('A', playedA), 't3');
+});
+
+test('getRealThirdForGroup devuelve null si el grupo no está completo', () => {
+  const partial = [groupMatch('a1', 'A', 't1', 't2', 1, 0)];
+  assert.strictEqual(getRealThirdForGroup('A', partial), null);
+});
+
+test('getRealThirdForGroup devuelve null para grupo inexistente', () => {
+  assert.strictEqual(getRealThirdForGroup('Z', playedA), null);
+});
+
+test('suggestThirdForLabel usa el primer grupo con tercero disponible', () => {
+  const state = { matches: playedA };
+  // 3ABC: A está completo -> t3
+  const r = suggestThirdForLabel('3ABC', state);
+  assert.strictEqual(r.teamId, 't3');
+  assert.strictEqual(r.candidates.length, 1);
+  assert.strictEqual(r.candidates[0].group, 'A');
+});
+
+test('suggestThirdForLabel devuelve null si ningún grupo está completo', () => {
+  const partial = [groupMatch('a1', 'A', 't1', 't2', 1, 0)];
+  const state = { matches: partial };
+  const r = suggestThirdForLabel('3ABC', state);
+  assert.strictEqual(r.teamId, null);
+  assert.strictEqual(r.candidates.length, 0);
+});
+
+test('suggestThirdForLabel devuelve [] para etiqueta no válida', () => {
+  const r = suggestThirdForLabel('1A', { matches: playedA });
+  assert.strictEqual(r.teamId, null);
+  assert.strictEqual(r.candidates.length, 0);
 });

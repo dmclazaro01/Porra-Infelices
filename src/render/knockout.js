@@ -146,13 +146,22 @@ function buildContent() {
   const fragment = document.createDocumentFragment();
   const groupMatchesCount = state.matches.filter(m => m.stage === 'GROUP').length;
   const filledGroupPredictions = Object.keys(state.predictions || {}).filter(id => state.matches.find(m => m.id === id && m.stage === 'GROUP')).length;
+  const koEditable = canEditKnockout();
 
   if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin()) {
     fragment.append(renderLockBanner());
-    fragment.append(el('div', { class: 'empty-state' }, [
-      el('h2', { text: 'Eliminatorias' }),
-      el('p', { text: 'Esperando a que se cierre el cuadro real. Se activará automáticamente cuando los 16 cruces de dieciseisavos estén definidos y el admin habilite "Eliminatorias editables".' }),
-    ]));
+    const waiting = el('div', { class: 'empty-state' });
+    waiting.append(el('h2', { text: 'Eliminatorias' }));
+    if (!isBracketComplete(state)) {
+      const r32 = state.matches.filter(m => m.stage === 'KNOCKOUT' && m.round === 'R32');
+      const r32Defined = r32.filter(m => m.home_team_id && m.away_team_id).length;
+      waiting.append(el('p', { text: `El cuadro real aún no está completo (${r32Defined}/16 cruces de dieciseisavos definidos). El admin está terminando de asignar los mejores terceros.` }));
+    } else if (!koEditable) {
+      waiting.append(el('p', { text: 'El cuadro real ya está completo. El admin activará las predicciones de eliminatorias en breve.' }));
+    } else {
+      waiting.append(el('p', { text: 'Termina primero tus predicciones de la fase de grupos para desbloquear las eliminatorias.' }));
+    }
+    fragment.append(waiting);
     return fragment;
   }
 

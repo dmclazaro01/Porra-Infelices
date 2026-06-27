@@ -393,3 +393,24 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .wc-team-row:last-child { border-bottom: 0; }
 .wc-team-row.winner-team { background: var(--gold); color: var(--ink); font-weight: 900; }
 .wc-provisional-note { padding: 2px 6px; font-size: 9px; font-style: italic; color: var(--red); text-align: center; background: var(--paper-dim); }
+
+/* Final bracket assistant (admin) */
+.final-bracket-assistant { display: grid; gap: 12px; }
+.assistant-block { padding: 10px 14px; border: 1px dashed var(--rule); background: var(--paper-dim); }
+.assistant-block h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: var(--navy); }
+.assistant-groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
+.assistant-group { display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border: 1px solid var(--rule); background: var(--paper); font-family: "Arial Black", Helvetica, Arial, sans-serif; }
+.assistant-group.is-complete { border-color: var(--green); }
+.assistant-group.is-pending { border-color: var(--red); }
+.assistant-group-letter { font-size: 18px; }
+.assistant-group-status { font-size: 10px; color: var(--muted); }
+.assistant-thirds-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.assistant-third-row { padding: 4px 8px; background: var(--paper); border: 1px solid var(--rule); font-size: 12px; }
+.assistant-slots-list { display: grid; gap: 6px; margin-top: 8px; }
+.assistant-slot-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--paper); border: 1px solid var(--rule); }
+.assistant-slot-label { flex: 0 0 auto; font-size: 12px; }
+.assistant-slot-select { flex: 1; padding: 4px 6px; border: 1px solid var(--rule); background: var(--paper); font-family: inherit; }
+.assistant-slot-status { min-width: 80px; font-size: 11px; color: var(--muted); }
+.assistant-activate { display: flex; align-items: center; gap: 12px; background: color-mix(in srgb, var(--green) 12%, var(--paper-dim)); border-color: var(--green); }
+.assistant-activated { background: color-mix(in srgb, var(--green) 18%, var(--paper-dim)); border-color: var(--green); }
+.assistant-activated p { margin: 0; color: var(--green); font-weight: 900; }
