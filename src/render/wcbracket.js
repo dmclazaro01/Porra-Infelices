@@ -3,7 +3,7 @@ import { getState } from '../state.js';
 import { resolveBracket, isBracketComplete } from '../bracket.js';
 
 const LEFT_ROUNDS = [
-  { label: 'Dieciseisavos', matches: ['M73', 'M74', 'M75', 'M76', 'M77', 'M78', 'M79', 'M80'] },
+  { label: 'Dieciseisavos', matches: ['M74', 'M77', 'M73', 'M75', 'M76', 'M78', 'M79', 'M80'] },
   { label: 'Octavos', matches: ['M89', 'M90', 'M93', 'M94'] },
   { label: 'Cuartos', matches: ['M97', 'M98'] },
   { label: 'Semis', matches: ['M101'] },
@@ -13,7 +13,7 @@ const RIGHT_ROUNDS = [
   { label: 'Semis', matches: ['M102'] },
   { label: 'Cuartos', matches: ['M99', 'M100'] },
   { label: 'Octavos', matches: ['M91', 'M92', 'M95', 'M96'] },
-  { label: 'Dieciseisavos', matches: ['M81', 'M82', 'M83', 'M84', 'M85', 'M86', 'M87', 'M88'] },
+  { label: 'Dieciseisavos', matches: ['M83', 'M84', 'M81', 'M82', 'M86', 'M88', 'M85', 'M87'] },
 ];
 
 const STATUS_BADGE = {
