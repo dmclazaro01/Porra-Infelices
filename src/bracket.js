@@ -45,15 +45,16 @@ function buildPredictedStandingsMap(state) {
   return map;
 }
 
-export function resolveBracket(state, { realMode }) {
+export function resolveBracket(state, { realMode }, predictions = null) {
+  const koPredictions = predictions || (state.knockoutPredictions || {});
   const out = {};
   if (!state || !state.matches) return out;
   const koMatches = state.matches.filter(m => m.stage === 'KNOCKOUT');
   const r32Complete = isBracketComplete(state);
   for (const match of koMatches) {
-    const teamA = match.home_team_id || resolveLabel(match.home_label, state, { realMode }).teamId;
-    const teamB = match.away_team_id || resolveLabel(match.away_label, state, { realMode }).teamId;
-    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[match.match_number];
+    const teamA = match.home_team_id || resolveLabel(match.home_label, state, { realMode }, koPredictions).teamId;
+    const teamB = match.away_team_id || resolveLabel(match.away_label, state, { realMode }, koPredictions).teamId;
+    const winner = realMode ? match.actual_winner_team_id : koPredictions[match.match_number];
     out[match.match_number] = {
       team_a: teamA,
       team_b: teamB,
@@ -68,14 +69,15 @@ export function resolveBracket(state, { realMode }) {
   return out;
 }
 
-export function resolveLabel(label, state, { realMode }) {
+export function resolveLabel(label, state, { realMode }, predictions = null) {
   if (!label || !state) return { teamId: null };
+  const koPredictions = predictions || (state.knockoutPredictions || {});
 
   if (label.startsWith('W') && label.length >= 4) {
     const mn = label.substring(1);
     const match = (state.matches || []).find(m => m.match_number === mn);
     if (!match) return { teamId: null };
-    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[mn];
+    const winner = realMode ? match.actual_winner_team_id : koPredictions[mn];
     return { teamId: winner || null };
   }
 
@@ -83,10 +85,12 @@ export function resolveLabel(label, state, { realMode }) {
     const mn = label.substring(1);
     const match = (state.matches || []).find(m => m.match_number === mn);
     if (!match) return { teamId: null };
-    const winner = realMode ? match.actual_winner_team_id : (state.knockoutPredictions || {})[mn];
+    const winner = realMode ? match.actual_winner_team_id : koPredictions[mn];
     if (!winner) return { teamId: null };
-    if (match.home_team_id === winner) return { teamId: match.away_team_id };
-    if (match.away_team_id === winner) return { teamId: match.home_team_id };
+    const homeId = match.home_team_id || resolveLabel(match.home_label, state, { realMode }, koPredictions).teamId;
+    const awayId = match.away_team_id || resolveLabel(match.away_label, state, { realMode }, koPredictions).teamId;
+    if (homeId === winner) return { teamId: awayId };
+    if (awayId === winner) return { teamId: homeId };
     return { teamId: null };
   }
 

@@ -72,7 +72,7 @@ function renderLockBanner() {
 }
 
 function buildBracketFromModule(state) {
-  const resolved = resolveBracket(state, { realMode: false });
+  const resolved = resolveBracket(state, { realMode: false }, knockoutPredictions);
   const result = {};
   for (const [mn, data] of Object.entries(resolved)) {
     result[mn] = {
