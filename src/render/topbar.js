@@ -9,9 +9,18 @@ export function renderTopbar() {
   const settings = state?.settings || {};
   const name = profile?.name || '';
   const group = profile?.group_name || '';
-  const deadline = settings.lock_deadline ? formatDate(settings.lock_deadline) : '';
   const locked = isLocked();
   const admin = isAdmin();
+
+  // Show the upcoming knockout deadline while eliminatorias are still editable,
+  // otherwise fall back to the main pool deadline.
+  let deadline = settings.lock_deadline;
+  let deadlineLabel = 'cierre';
+  if (settings.knockout_lock_deadline && new Date(settings.knockout_lock_deadline) > new Date()) {
+    deadline = settings.knockout_lock_deadline;
+    deadlineLabel = 'cierre eliminatorias';
+  }
+  const deadlineText = deadline ? formatDate(deadline) : '';
 
   const topbar = el('div', { class: 'topbar' });
   const inner = el('div', { class: 'topbar-inner' });
@@ -25,7 +34,7 @@ export function renderTopbar() {
 
   const statusParts = [name];
   if (group) statusParts.push(group);
-  if (deadline) statusParts.push(`cierre ${deadline}`);
+  if (deadlineText) statusParts.push(`${deadlineLabel} ${deadlineText}`);
   const statusText = statusParts.join(' \u00b7 ');
 
   const statusLine = el('div', { class: 'status-line' }, [statusText]);
