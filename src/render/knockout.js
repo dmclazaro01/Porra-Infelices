@@ -6,7 +6,7 @@ import { resolveBracket, isBracketComplete } from '../bracket.js';
 const BONUS_POINTS_INFO = 5;
 
 const LEFT_ROUNDS = [
-  { label: 'Dieciseisavos', matches: ['M73', 'M74', 'M75', 'M77', 'M83', 'M84', 'M81', 'M82'] },
+  { label: 'Dieciseisavos', matches: ['M73', 'M74', 'M75', 'M76', 'M77', 'M78', 'M79', 'M80'] },
   { label: 'Octavos', matches: ['M89', 'M90', 'M93', 'M94'] },
   { label: 'Cuartos', matches: ['M97', 'M98'] },
   { label: 'Semis', matches: ['M101'] },
@@ -16,7 +16,7 @@ const RIGHT_ROUNDS = [
   { label: 'Semis', matches: ['M102'] },
   { label: 'Cuartos', matches: ['M99', 'M100'] },
   { label: 'Octavos', matches: ['M91', 'M92', 'M95', 'M96'] },
-  { label: 'Dieciseisavos', matches: ['M76', 'M78', 'M79', 'M80', 'M86', 'M88', 'M85', 'M87'] },
+  { label: 'Dieciseisavos', matches: ['M81', 'M82', 'M83', 'M84', 'M85', 'M86', 'M87', 'M88'] },
 ];
 
 const ROUND_LABELS = { R32: 'Dieciseisavos', R16: 'Octavos', QF: 'Cuartos', SF: 'Semifinales', THIRD: '3er puesto', FINAL: 'Final' };
@@ -148,19 +148,11 @@ function buildContent() {
   const filledGroupPredictions = Object.keys(state.predictions || {}).filter(id => state.matches.find(m => m.id === id && m.stage === 'GROUP')).length;
   const koEditable = canEditKnockout();
 
-  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin()) {
+  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin() && !koEditable) {
     fragment.append(renderLockBanner());
     const waiting = el('div', { class: 'empty-state' });
     waiting.append(el('h2', { text: 'Eliminatorias' }));
-    if (!isBracketComplete(state)) {
-      const r32 = state.matches.filter(m => m.stage === 'KNOCKOUT' && m.round === 'R32');
-      const r32Defined = r32.filter(m => m.home_team_id && m.away_team_id).length;
-      waiting.append(el('p', { text: `El cuadro real aún no está completo (${r32Defined}/16 cruces de dieciseisavos definidos). El admin está terminando de asignar los mejores terceros.` }));
-    } else if (!koEditable) {
-      waiting.append(el('p', { text: 'El cuadro real ya está completo. El admin activará las predicciones de eliminatorias en breve.' }));
-    } else {
-      waiting.append(el('p', { text: 'Termina primero tus predicciones de la fase de grupos para desbloquear las eliminatorias.' }));
-    }
+    waiting.append(el('p', { text: 'Termina primero tus predicciones de la fase de grupos para desbloquear las eliminatorias.' }));
     fragment.append(waiting);
     return fragment;
   }

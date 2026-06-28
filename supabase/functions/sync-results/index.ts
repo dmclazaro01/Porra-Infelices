@@ -16,6 +16,14 @@ const BBC_ROUND_MAP: Record<string, string> = {
   'Final': 'FINAL',
 };
 
+// BBC team codes that differ from our internal team codes.
+const BBC_CODE_MAP: Record<string, string> = {
+  'SA': 'RSA',
+  'MOR': 'MAR',
+  'SPA': 'ESP',
+  'SWI': 'SUI',
+};
+
 // Knockout bracket for the 2026 World Cup according to BBC Sport ordering.
 // M73-M88 are the Last 32 matches in the exact order BBC returns them.
 const KNOCKOUT_SLOTS = [
@@ -82,6 +90,7 @@ Deno.serve(async (req) => {
       knockoutMatchCount: 0,
       bbcMatchCount: 0,
       seededSlots: 0,
+      r32Status: [] as { id: string; home_team_id: string | null; away_team_id: string | null; home_label: string; away_label: string }[],
     };
 
     // Ensure knockout match slots exist (seed once)
@@ -286,6 +295,22 @@ Deno.serve(async (req) => {
       .from('sync_log')
       .upsert({ id: 1, last_sync_at: new Date().toISOString(), sync_status: syncStatus });
 
+    // Re-read final knockout state for debugging
+    const { data: finalMatches } = await supabase
+      .from('matches')
+      .select('id, match_number, round, stage, home_team_id, away_team_id, home_label, away_label')
+      .eq('stage', 'KNOCKOUT')
+      .eq('round', 'R32');
+    debug.r32Status = (finalMatches || [])
+      .sort((a: any, b: any) => a.id.localeCompare(b.id))
+      .map((m: any) => ({
+        id: m.id,
+        home_team_id: m.home_team_id || null,
+        away_team_id: m.away_team_id || null,
+        home_label: m.home_label,
+        away_label: m.away_label,
+      }));
+
     return new Response(JSON.stringify({
       groupUpdates,
       knockoutUpdates,
@@ -441,7 +466,8 @@ function parseScore(v: any): number | null {
 }
 
 function resolveBBCTeam(team: BBCTeam, codeToId: Record<string, string>): ResolvedTeam {
-  const teamId = team.code ? codeToId[team.code] || null : null;
+  const mappedCode = team.code ? (BBC_CODE_MAP[team.code] || team.code) : '';
+  const teamId = mappedCode ? codeToId[mappedCode] || null : null;
 
   // Convert BBC placeholder like "E1" to our label "1E"
   const label = team.placeholder ? normalizePlaceholder(team.placeholder) : null;
