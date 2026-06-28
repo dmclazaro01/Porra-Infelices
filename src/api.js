@@ -90,7 +90,7 @@ export async function fetchState() {
   const profile = await getProfile(user.id);
   const isAdmin = profile.role === 'admin';
 
-  const [playerGroups, teams, groupsT, matches, settings, syncLog, bonusAnswers] = await Promise.all([
+  const [playerGroups, teams, groupsT, matches, settings, syncLog, bonusAnswers, serverTime] = await Promise.all([
     supabase.from('player_groups').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('teams').select('*').then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('groups_t').select('*').then(r => { if (r.error) throw r.error; return r.data.map(g => ({ ...g, teams: (g.team_ids || []).map(tid => ({ team_id: tid })) })); }),
@@ -98,11 +98,13 @@ export async function fetchState() {
     supabase.from('settings').select('*').single().then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('sync_log').select('*').limit(1).maybeSingle().then(r => { if (r.error) throw r.error; return r.data; }),
     supabase.from('bonus_answers').select('*').limit(1).maybeSingle().then(r => { if (r.error) throw r.error; return r.data; }),
+    supabase.rpc('get_server_time').then(r => { if (r.error) throw r.error; return r.data ? new Date(r.data) : new Date(); }),
   ]);
 
-  const isLocked = settings.locked || (settings.lock_deadline && new Date(settings.lock_deadline) <= new Date());
+  const serverNow = serverTime;
+  const isLocked = settings.locked || (settings.lock_deadline && new Date(settings.lock_deadline) <= serverNow);
   const knockoutEditingOpen = settings.knockout_editable === true &&
-    (!settings.knockout_lock_deadline || new Date(settings.knockout_lock_deadline) > new Date());
+    (!settings.knockout_lock_deadline || new Date(settings.knockout_lock_deadline) > serverNow);
 
   let groupPredictions = [];
   let tiebreakPredictions = [];
