@@ -24,8 +24,8 @@ const BBC_CODE_MAP: Record<string, string> = {
   'SWI': 'SUI',
 };
 
-// Knockout bracket for the 2026 World Cup according to BBC Sport ordering.
-// M73-M88 are the Last 32 matches in the exact order BBC returns them.
+// Official 2026 World Cup knockout bracket.
+// M73-M88 are the Round of 32 matches; M89-M96 Round of 16; M97-M100 QF; M101-M102 SF.
 const KNOCKOUT_SLOTS = [
   { id: 'M73',  round: 'R32',  home_label: '1E',    away_label: '3ABCDF' },
   { id: 'M74',  round: 'R32',  home_label: '1I',    away_label: '3CDFGH' },
@@ -43,17 +43,17 @@ const KNOCKOUT_SLOTS = [
   { id: 'M86',  round: 'R32',  home_label: '2D',    away_label: '2G' },
   { id: 'M87',  round: 'R32',  home_label: '1B',    away_label: '3EFGIJ' },
   { id: 'M88',  round: 'R32',  home_label: '1K',    away_label: '3DEIJL' },
-  { id: 'M89',  round: 'R16',  home_label: 'WM74',  away_label: 'WM77' },
-  { id: 'M90',  round: 'R16',  home_label: 'WM73',  away_label: 'WM75' },
-  { id: 'M91',  round: 'R16',  home_label: 'WM83',  away_label: 'WM84' },
-  { id: 'M92',  round: 'R16',  home_label: 'WM81',  away_label: 'WM82' },
-  { id: 'M93',  round: 'R16',  home_label: 'WM76',  away_label: 'WM78' },
-  { id: 'M94',  round: 'R16',  home_label: 'WM79',  away_label: 'WM80' },
-  { id: 'M95',  round: 'R16',  home_label: 'WM86',  away_label: 'WM88' },
-  { id: 'M96',  round: 'R16',  home_label: 'WM85',  away_label: 'WM87' },
+  { id: 'M89',  round: 'R16',  home_label: 'WM73',  away_label: 'WM74' },
+  { id: 'M90',  round: 'R16',  home_label: 'WM75',  away_label: 'WM76' },
+  { id: 'M91',  round: 'R16',  home_label: 'WM77',  away_label: 'WM78' },
+  { id: 'M92',  round: 'R16',  home_label: 'WM79',  away_label: 'WM80' },
+  { id: 'M93',  round: 'R16',  home_label: 'WM81',  away_label: 'WM82' },
+  { id: 'M94',  round: 'R16',  home_label: 'WM83',  away_label: 'WM84' },
+  { id: 'M95',  round: 'R16',  home_label: 'WM85',  away_label: 'WM86' },
+  { id: 'M96',  round: 'R16',  home_label: 'WM87',  away_label: 'WM88' },
   { id: 'M97',  round: 'QF',   home_label: 'WM89',  away_label: 'WM90' },
-  { id: 'M98',  round: 'QF',   home_label: 'WM93',  away_label: 'WM94' },
-  { id: 'M99',  round: 'QF',   home_label: 'WM91',  away_label: 'WM92' },
+  { id: 'M98',  round: 'QF',   home_label: 'WM91',  away_label: 'WM92' },
+  { id: 'M99',  round: 'QF',   home_label: 'WM93',  away_label: 'WM94' },
   { id: 'M100', round: 'QF',   home_label: 'WM95',  away_label: 'WM96' },
   { id: 'M101', round: 'SF',   home_label: 'WM97',  away_label: 'WM98' },
   { id: 'M102', round: 'SF',   home_label: 'WM99',  away_label: 'WM100' },
