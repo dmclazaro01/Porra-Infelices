@@ -194,6 +194,8 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .payment-item, .player-select { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 38px; padding: 6px 10px; border: 2px solid var(--rule); background: var(--paper); color: var(--ink); font-weight: 700; }
 .player-select { width: 100%; text-transform: none; font-family: "Times New Roman", Times, serif; font-size: 15px; }
 .player-select.active { background: var(--navy); color: var(--paper); border-style: inset; }
+.pick-count { display: inline-flex; align-items: center; justify-content: center; min-height: 20px; padding: 1px 7px; border: 1px solid var(--frame); background: var(--paper-dim); color: var(--muted); font-family: "Arial Black", Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 900; white-space: nowrap; }
+.player-select.active .pick-count { background: var(--paper); color: var(--navy); }
 
 .picks-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
 .pick-detail { min-width: 0; }

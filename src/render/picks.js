@@ -277,6 +277,9 @@ function renderSingleView(entries) {
     }, [
       el('span', { text: player?.name || '??' }),
       isAdmin() ? groupChip(player?.group_name) : '',
+      isAdmin() && entry.summary?.knockoutTotal != null
+        ? el('span', { class: 'pick-count', text: `${entry.summary.knockoutFilled}/${entry.summary.knockoutTotal}` })
+        : '',
       paymentPill(player),
     ]);
     btn.dataset.playerId = player?.id;

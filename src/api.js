@@ -256,12 +256,19 @@ export async function fetchState() {
         bonusDetails.push({ label: item.label, predicted, status, points });
       }
 
+      const knockoutTotal = matches.filter(m => !m.group_letter).length;
+      const knockoutFilled = knockoutDetails.filter(d => d.predicted_winner != null).length;
+
       publicEntries.push({
         participant: { id: player.id, name: player.name, is_active: player.is_active, group_name: player.group_name, has_paid: player.has_paid },
         details: {
           groups: groupDetails,
           knockout: (isAdmin || !knockoutEditingOpen) ? knockoutDetails : undefined,
           bonus: bonusDetails,
+        },
+        summary: {
+          knockoutFilled,
+          knockoutTotal,
         },
       });
     }
