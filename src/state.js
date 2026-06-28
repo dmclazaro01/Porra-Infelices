@@ -56,7 +56,12 @@ export function canEditKnockout() {
   if (!state) return false;
   // Knockout can be edited independently when knockout_editable is true
   // Only active players can edit, and only when the setting allows it
-  return state.profile.is_active && state.settings.knockout_editable === true;
+  if (!state.profile.is_active || state.settings.knockout_editable !== true) return false;
+  // Respect an optional knockout-specific lock deadline
+  if (state.settings.knockout_lock_deadline) {
+    return new Date(state.settings.knockout_lock_deadline) > new Date();
+  }
+  return true;
 }
 
 function notifyListeners() {

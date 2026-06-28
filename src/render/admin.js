@@ -531,6 +531,10 @@ function renderSettingsPanel(state) {
     type: 'datetime-local',
     value: settings.lock_deadline ? toLocalDatetimeString(new Date(settings.lock_deadline)) : '',
   });
+  const koDeadlineInput = el('input', {
+    type: 'datetime-local',
+    value: settings.knockout_lock_deadline ? toLocalDatetimeString(new Date(settings.knockout_lock_deadline)) : '',
+  });
   const feeInput = el('input', {
     type: 'number',
     value: (settings.entry_fee_cents || 200) / 100,
@@ -564,6 +568,7 @@ function renderSettingsPanel(state) {
       try {
         await api.adminUpdateSettings({
           lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
+          knockout_lock_deadline: koDeadlineInput.value ? new Date(koDeadlineInput.value).toISOString() : null,
           locked: lockedValue,
           knockout_editable: koEditableValue,
           entry_fee_cents: Math.round(Number(feeInput.value) * 100),
@@ -591,6 +596,10 @@ function renderSettingsPanel(state) {
     el('div', { class: 'fee-row' }, [
       el('label', { for: koEditableId, class: 'fee-label', style: 'cursor:pointer', text: 'Eliminatorias editables:' }),
       koEditableCheck,
+    ]),
+    el('div', { class: 'fee-row' }, [
+      el('label', { class: 'fee-label', text: 'Cierre eliminatorias:' }),
+      koDeadlineInput,
     ]),
     saveBtn,
     saveError,
