@@ -101,6 +101,8 @@ export async function fetchState() {
   ]);
 
   const isLocked = settings.locked || (settings.lock_deadline && new Date(settings.lock_deadline) <= new Date());
+  const knockoutEditingOpen = settings.knockout_editable === true &&
+    (!settings.knockout_lock_deadline || new Date(settings.knockout_lock_deadline) > new Date());
 
   let groupPredictions = [];
   let tiebreakPredictions = [];
@@ -256,7 +258,11 @@ export async function fetchState() {
 
       publicEntries.push({
         participant: { id: player.id, name: player.name, is_active: player.is_active, group_name: player.group_name, has_paid: player.has_paid },
-        details: { groups: groupDetails, knockout: knockoutDetails, bonus: bonusDetails },
+        details: {
+          groups: groupDetails,
+          knockout: (isAdmin || !knockoutEditingOpen) ? knockoutDetails : undefined,
+          bonus: bonusDetails,
+        },
       });
     }
   }
@@ -356,7 +362,7 @@ export async function fetchState() {
     // Object versions for picks view
     public_predictions: publicEntries,
     public_tiebreaks: all_tiebreaks,
-    public_knockout: all_knockout,
+    public_knockout: (isAdmin || !knockoutEditingOpen) ? all_knockout : {},
     public_bonus: all_bonus,
     all_profiles: all_profiles_map,
     allProfiles,
