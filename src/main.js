@@ -1,5 +1,6 @@
 import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange, getCurrentUser, getSessionToken } from './api.js';
-import { getState, load, isLocked, isAdmin, canEditPredictions, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
+import { getState, load, isLocked, isAdmin, canEditPredictions, canEditKnockout, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
+import { isBracketComplete } from './bracket.js';
 import { renderLogin, renderGroupChoice } from './render/login.js';
 import { renderTopbar } from './render/topbar.js';
 // renderTopbar reads state internally via getState()
@@ -185,9 +186,13 @@ function renderGroupChoiceScreen() {
 function renderTabs() {
   const tabs = document.createElement('nav');
   tabs.className = 'tabs';
+  const state = getState();
   const items = [];
   if (!isAdmin()) {
     items.push(['groups', 'Grupos'], ['bonus', '🏅 Bonus']);
+    if (canEditKnockout() || isBracketComplete(state)) {
+      items.push(['knockout', 'Eliminatorias']);
+    }
   } else {
     items.push(['knockout', 'Eliminatorias']);
   }
