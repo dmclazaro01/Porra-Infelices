@@ -36,6 +36,13 @@ function renderKnockoutPickRow(item) {
   ]);
 }
 
+// Natural numeric order for match codes like "M73", "M104". A plain string
+// sort puts "M100" before "M73", which is unhelpful when following a round.
+function matchOrder(mn) {
+  const n = parseInt((mn || '').replace(/^M/i, ''), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function renderPickDetail(entry) {
   const player = entry.participant;
   const detail = el('article', { class: 'pick-detail panel' });
@@ -58,14 +65,18 @@ function renderPickDetail(entry) {
     ]));
   }
 
+  // Eliminatorias first so the most relevant fixtures of the moment are at
+  // the top of the comparator; groups follow underneath for reference.
   detail.append(el('div', { class: 'detail-section' }, [
-    el('h3', { text: 'Grupos' }),
-    ...(entry.details?.groups || []).map(renderGroupPickRow),
+    el('h3', { text: 'Eliminatorias' }),
+    ...[...(entry.details?.knockout || [])]
+      .sort((a, b) => matchOrder(a.match_number) - matchOrder(b.match_number))
+      .map(renderKnockoutPickRow),
   ]));
 
   detail.append(el('div', { class: 'detail-section' }, [
-    el('h3', { text: 'Eliminatorias' }),
-    ...(entry.details?.knockout || []).map(renderKnockoutPickRow),
+    el('h3', { text: 'Grupos' }),
+    ...(entry.details?.groups || []).map(renderGroupPickRow),
   ]));
 
   return detail;
