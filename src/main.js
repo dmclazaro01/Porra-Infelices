@@ -1,5 +1,5 @@
 import { initSupabase, login, logout, joinGroup, fetchState, saveGroupPrediction, saveTiebreak, saveKnockoutPrediction, saveBonus, onAuthChange, getCurrentUser, getSessionToken } from './api.js';
-import { getState, load, isLocked, isAdmin, canEditPredictions, canEditKnockout, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
+import { getState, load, isLocked, isAdmin, canEditPredictions, canEditKnockout, hasAnyKnockoutEditable, subscribe, startLiveRefresh, stopLiveRefresh } from './state.js';
 import { isBracketComplete } from './bracket.js';
 import { renderLogin, renderGroupChoice } from './render/login.js';
 import { renderTopbar } from './render/topbar.js';
@@ -190,7 +190,7 @@ function renderTabs() {
   const items = [];
   if (!isAdmin()) {
     items.push(['groups', 'Grupos'], ['bonus', '🏅 Bonus']);
-    if (canEditKnockout() || isBracketComplete(state)) {
+    if (canEditKnockout() || hasAnyKnockoutEditable() || isBracketComplete(state)) {
       items.push(['knockout', 'Eliminatorias']);
     }
   } else {

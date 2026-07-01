@@ -558,6 +558,14 @@ function renderSettingsPanel(state) {
     checked: koEditableValue,
     onchange: () => { koEditableValue = koEditableCheck.checked; },
   });
+  // Edición parcial: match_numbers concretos que se pueden tocar aunque las
+  // eliminatorias globales estén cerradas. Se guarda como TEXT[] normalizado.
+  const editableMatchesInput = el('input', {
+    type: 'text',
+    placeholder: 'Ej: M92, M98',
+    value: Array.isArray(settings.editable_ko_matches) ? settings.editable_ko_matches.join(', ') : '',
+    style: 'flex:1;min-width:0',
+  });
 
   const saveError = el('div', { class: 'error' });
   const saveBtn = el('button', {
@@ -566,11 +574,16 @@ function renderSettingsPanel(state) {
     onclick: async () => {
       saveError.textContent = '';
       try {
+        const editableList = editableMatchesInput.value
+          .split(/[\s,]+/)
+          .map(s => s.trim().toUpperCase())
+          .filter(s => /^M\d{1,3}$/.test(s));
         await api.adminUpdateSettings({
           lock_deadline: deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null,
           knockout_lock_deadline: koDeadlineInput.value ? new Date(koDeadlineInput.value).toISOString() : null,
           locked: lockedValue,
           knockout_editable: koEditableValue,
+          editable_ko_matches: editableList,
           entry_fee_cents: Math.round(Number(feeInput.value) * 100),
         });
         await load();
@@ -600,6 +613,14 @@ function renderSettingsPanel(state) {
     el('div', { class: 'fee-row' }, [
       el('label', { class: 'fee-label', text: 'Cierre eliminatorias:' }),
       koDeadlineInput,
+    ]),
+    el('div', { class: 'fee-row', style: 'align-items:flex-start' }, [
+      el('label', { class: 'fee-label', text: 'Edición parcial (M** editables):' }),
+      el('div', { style: 'flex:1;display:grid;gap:4px' }, [
+        editableMatchesInput,
+        el('div', { class: 'muted-line', style: 'font-size:11px',
+          text: 'Match_numbers separados por comas. Los jugadores podrán tocar solo esos cruces aunque las eliminatorias estén cerradas. Vacío = ninguno.' }),
+      ]),
     ]),
     saveBtn,
     saveError,

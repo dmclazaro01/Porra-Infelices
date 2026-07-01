@@ -52,16 +52,30 @@ export function canEditPredictions() {
   return state.profile.is_active && !isLocked();
 }
 
-export function canEditKnockout() {
+// Cuando se pasa matchNumber la comprobación es más flexible: además de la
+// autorización global (knockout_editable + deadline), un partido concreto que
+// el admin haya listado en settings.editable_ko_matches también se considera
+// editable. Sin argumento se conserva el contrato antiguo (edición global).
+export function canEditKnockout(matchNumber) {
   if (!state) return false;
-  // Knockout can be edited independently when knockout_editable is true
-  // Only active players can edit, and only when the setting allows it
-  if (!state.profile.is_active || state.settings.knockout_editable !== true) return false;
-  // Respect an optional knockout-specific lock deadline
-  if (state.settings.knockout_lock_deadline) {
-    return new Date(state.settings.knockout_lock_deadline) > new Date();
-  }
-  return true;
+  if (!state.profile.is_active) return false;
+  const globallyEditable = state.settings.knockout_editable === true &&
+    (!state.settings.knockout_lock_deadline ||
+      new Date(state.settings.knockout_lock_deadline) > new Date());
+  if (globallyEditable) return true;
+  if (!matchNumber) return false;
+  const overrides = state.settings.editable_ko_matches;
+  return Array.isArray(overrides) && overrides.includes(matchNumber);
+}
+
+// True cuando hay algún cruce (global o por override) que el usuario actual
+// puede tocar. Útil para decidir si mostrar botones/tabs, aunque la mayoría
+// del bracket esté bloqueado.
+export function hasAnyKnockoutEditable() {
+  if (!state || !state.profile.is_active) return false;
+  if (canEditKnockout()) return true;
+  const overrides = state.settings.editable_ko_matches;
+  return Array.isArray(overrides) && overrides.length > 0;
 }
 
 function notifyListeners() {

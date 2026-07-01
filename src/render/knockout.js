@@ -1,5 +1,5 @@
 import { el, teamInline } from '../utils.js';
-import { getState, canEditPredictions, canEditKnockout, isLocked, isAdmin } from '../state.js';
+import { getState, canEditPredictions, canEditKnockout, hasAnyKnockoutEditable, isLocked, isAdmin } from '../state.js';
 import { saveKnockoutPrediction } from '../api.js';
 import { resolveBracket, isBracketComplete } from '../bracket.js';
 
@@ -34,7 +34,8 @@ function debounceSaveKnockout(matchNumber, winnerId) {
 function renderLockBanner() {
   const locked = isLocked();
   const koEditable = canEditKnockout();
-  const editable = canEditPredictions() || koEditable;
+  const partialEditable = !koEditable && hasAnyKnockoutEditable();
+  const editable = canEditPredictions() || koEditable || partialEditable;
   const right = el('div', { class: 'lock-banner-right' });
   if (editable) {
     const saveBtn = el('button', { class: 'force-save', text: '💾 Forzar guardado' });
@@ -42,7 +43,12 @@ function renderLockBanner() {
       saveBtn.textContent = '⏳ Guardando...';
       saveBtn.disabled = true;
       try {
-        const jobs = Object.entries(knockoutPredictions).map(([mn, wid]) => saveKnockoutPrediction(mn, wid));
+        // Solo guardamos las predicciones de cruces en los que el usuario
+        // realmente puede editar ahora mismo: si estamos en modo "edición
+        // parcial", intentar guardar otros dispararía un error en el servidor.
+        const jobs = Object.entries(knockoutPredictions)
+          .filter(([mn]) => canEditPredictions() || canEditKnockout(mn))
+          .map(([mn, wid]) => saveKnockoutPrediction(mn, wid));
         await Promise.all(jobs);
         saveBtn.textContent = '✓ Guardado';
         setTimeout(() => {
@@ -60,12 +66,22 @@ function renderLockBanner() {
     });
     right.append(saveBtn);
   }
-  right.append(el('span', { class: `badge ${editable ? 'open' : 'locked'}`, text: koEditable ? 'Eliminatorias editables' : editable ? 'Editable' : 'Sin edición' }));
-  const bannerText = locked ? (koEditable ? 'Solo eliminatorias editables' : 'Porra cerrada') : 'Porra abierta';
+  const badgeText = koEditable ? 'Eliminatorias editables'
+    : partialEditable ? 'Edición parcial'
+    : editable ? 'Editable' : 'Sin edición';
+  right.append(el('span', { class: `badge ${editable ? 'open' : 'locked'}`, text: badgeText }));
+  const bannerText = locked
+    ? (koEditable ? 'Solo eliminatorias editables' : partialEditable ? 'Solo los cruces marcados por el admin' : 'Porra cerrada')
+    : 'Porra abierta';
+  const bannerHint = koEditable
+    ? 'Puedes modificar las eliminatorias. Grupos y bonus están fijos.'
+    : partialEditable
+      ? 'El admin ha habilitado la edición solo en ciertos cruces. Los demás están fijos.'
+      : locked ? 'Lo guardado queda fijo.' : 'Predice los ganadores de cada cruce.';
   return el('div', { class: `lock-banner ${locked ? 'is-locked' : 'is-open'}` }, [
     el('div', {}, [
       el('strong', { text: bannerText }),
-      el('span', { text: koEditable ? 'Puedes modificar las eliminatorias. Grupos y bonus están fijos.' : locked ? 'Lo guardado queda fijo.' : 'Predice los ganadores de cada cruce.' }),
+      el('span', { text: bannerHint }),
     ]),
     right,
   ]);
@@ -90,21 +106,26 @@ function buildBracketFromModule(state) {
 }
 
 function renderKoMatch(matchData, side) {
-  const card = el('div', { class: `ko-match ${side}` });
-  const nextLabel = matchData.next ? `→ ${matchData.next}` : matchData.match_number === 'M104' ? 'Campeón' : '';
+  const mn = matchData.match_number;
+  const cardEditable = canEditPredictions() || canEditKnockout(mn);
+  // Cuando la edición es solo para algunos M**, dejamos ver claramente cuáles
+  // están abiertos y cuáles siguen bloqueados.
+  const editClass = cardEditable ? '' : 'is-readonly';
+  const card = el('div', { class: `ko-match ${side} ${editClass}` });
+  const nextLabel = matchData.next ? `→ ${matchData.next}` : mn === 'M104' ? 'Campeón' : '';
   card.append(el('div', { class: 'ko-title' }, [
-    el('span', { text: matchData.match_number }),
+    el('span', { text: mn }),
     el('span', { text: nextLabel }),
   ]));
   [['team_a', matchData.label_a], ['team_b', matchData.label_b]].forEach(([slot, fallback]) => {
     const teamId = matchData[slot];
     card.append(el('button', {
       class: `winner ${matchData.winner === teamId ? 'active' : ''}`,
-      disabled: (!canEditPredictions() && !canEditKnockout()) || !teamId ? 'disabled' : null,
+      disabled: !cardEditable || !teamId ? 'disabled' : null,
       onclick: () => {
-        if ((!canEditPredictions() && !canEditKnockout()) || !teamId) return;
-        knockoutPredictions[matchData.match_number] = teamId;
-        debounceSaveKnockout(matchData.match_number, teamId);
+        if (!cardEditable || !teamId) return;
+        knockoutPredictions[mn] = teamId;
+        debounceSaveKnockout(mn, teamId);
         rebuild();
       },
     }, [teamInline(teamId, fallback)]));
@@ -147,8 +168,9 @@ function buildContent() {
   const groupMatchesCount = state.matches.filter(m => m.stage === 'GROUP').length;
   const filledGroupPredictions = Object.keys(state.predictions || {}).filter(id => state.matches.find(m => m.id === id && m.stage === 'GROUP')).length;
   const koEditable = canEditKnockout();
+  const anyEditable = koEditable || hasAnyKnockoutEditable();
 
-  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin() && !koEditable) {
+  if (filledGroupPredictions < groupMatchesCount && groupMatchesCount > 0 && !isAdmin() && !anyEditable) {
     fragment.append(renderLockBanner());
     const waiting = el('div', { class: 'empty-state' });
     waiting.append(el('h2', { text: 'Eliminatorias' }));

@@ -62,6 +62,9 @@ const KNOCKOUT_SLOTS = [
 ];
 
 async function ensureKnockoutSlots(supabase: any) {
+  // Do NOT set status here: the upsert runs on every sync, and forcing
+  // status='scheduled' would flip a live/finished match back to scheduled
+  // between this call and the BBC parse below if BBC fails to return it.
   const rows = KNOCKOUT_SLOTS.map(s => ({
     id: s.id,
     match_number: s.id,
@@ -69,7 +72,6 @@ async function ensureKnockoutSlots(supabase: any) {
     stage: 'KNOCKOUT',
     home_label: s.home_label,
     away_label: s.away_label,
-    status: 'scheduled',
   }));
 
   const { error } = await supabase.from('matches').upsert(rows, { onConflict: 'id' });

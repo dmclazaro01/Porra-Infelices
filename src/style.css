@@ -164,6 +164,13 @@ input, select { min-height: 40px; padding: 6px 10px; border: 2px inset var(--bev
 .final-column { display: grid; gap: 14px; align-self: start; align-content: start; min-width: 0; padding-top: 128px; }
 .final-column h3:first-child { background: var(--red); }
 .ko-match { position: relative; background: var(--paper); border: 2px solid var(--rule); min-width: 0; }
+.ko-match.is-readonly { opacity: 0.65; }
+.ko-match.is-readonly .ko-title { background: repeating-linear-gradient(45deg, var(--paper-dim), var(--paper-dim) 4px, var(--bevel-face) 4px, var(--bevel-face) 6px); }
+.ko-match:not(.is-readonly) { outline: 2px dashed var(--gold); outline-offset: 2px; }
+/* Cuando toda la sección es editable no queremos que TODAS las tarjetas
+   parpadeen con outline: el highlight solo tiene sentido cuando conviven
+   editables y bloqueadas (edición parcial). */
+.bracket-board:not(:has(.ko-match.is-readonly)) .ko-match:not(.is-readonly) { outline: none; }
 .bracket-side.left .ko-match::after, .bracket-side.right .ko-match::before { content: ""; position: absolute; top: 50%; width: 12px; border-top: 2px solid var(--gold); }
 .bracket-side.left .ko-match::after { right: -13px; }
 .bracket-side.right .ko-match::before { left: -13px; }
