@@ -558,6 +558,17 @@ function renderSettingsPanel(state) {
     checked: koEditableValue,
     onchange: () => { koEditableValue = koEditableCheck.checked; },
   });
+  // Ocultar la sección Eliminatorias de Quinielas sin cambiar la editabilidad
+  // (útil al usar edición parcial: los cruces se pueden retocar sin que los
+  // picks de los demás queden expuestos).
+  let hideKoValue = settings.hide_knockout_from_picks || false;
+  const hideKoId = 'chk-hide-ko-picks';
+  const hideKoCheck = el('input', {
+    id: hideKoId,
+    type: 'checkbox',
+    checked: hideKoValue,
+    onchange: () => { hideKoValue = hideKoCheck.checked; },
+  });
   // Edición parcial: match_numbers concretos que se pueden tocar aunque las
   // eliminatorias globales estén cerradas. Se guarda como TEXT[] normalizado.
   const editableMatchesInput = el('input', {
@@ -583,6 +594,7 @@ function renderSettingsPanel(state) {
           knockout_lock_deadline: koDeadlineInput.value ? new Date(koDeadlineInput.value).toISOString() : null,
           locked: lockedValue,
           knockout_editable: koEditableValue,
+          hide_knockout_from_picks: hideKoValue,
           editable_ko_matches: editableList,
           entry_fee_cents: Math.round(Number(feeInput.value) * 100),
         });
@@ -609,6 +621,10 @@ function renderSettingsPanel(state) {
     el('div', { class: 'fee-row' }, [
       el('label', { for: koEditableId, class: 'fee-label', style: 'cursor:pointer', text: 'Eliminatorias editables:' }),
       koEditableCheck,
+    ]),
+    el('div', { class: 'fee-row' }, [
+      el('label', { for: hideKoId, class: 'fee-label', style: 'cursor:pointer', text: 'Ocultar eliminatorias en Quinielas:' }),
+      hideKoCheck,
     ]),
     el('div', { class: 'fee-row' }, [
       el('label', { class: 'fee-label', text: 'Cierre eliminatorias:' }),

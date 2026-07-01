@@ -67,12 +67,18 @@ function renderPickDetail(entry) {
 
   // Eliminatorias first so the most relevant fixtures of the moment are at
   // the top of the comparator; groups follow underneath for reference.
-  detail.append(el('div', { class: 'detail-section' }, [
-    el('h3', { text: 'Eliminatorias' }),
-    ...[...(entry.details?.knockout || [])]
-      .sort((a, b) => matchOrder(a.match_number) - matchOrder(b.match_number))
-      .map(renderKnockoutPickRow),
-  ]));
+  // Cuando el backend devuelve `knockout: undefined` es una señal explícita
+  // de que hay que ocultar la sección (por edición abierta o por el toggle
+  // del admin); un array vacío en cambio sí se pinta como "sin picks".
+  const koRows = entry.details?.knockout;
+  if (Array.isArray(koRows)) {
+    detail.append(el('div', { class: 'detail-section' }, [
+      el('h3', { text: 'Eliminatorias' }),
+      ...[...koRows]
+        .sort((a, b) => matchOrder(a.match_number) - matchOrder(b.match_number))
+        .map(renderKnockoutPickRow),
+    ]));
+  }
 
   detail.append(el('div', { class: 'detail-section' }, [
     el('h3', { text: 'Grupos' }),

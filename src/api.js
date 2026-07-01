@@ -105,6 +105,11 @@ export async function fetchState() {
   const isLocked = settings.locked || (settings.lock_deadline && new Date(settings.lock_deadline) <= serverNow);
   const knockoutEditingOpen = settings.knockout_editable === true &&
     (!settings.knockout_lock_deadline || new Date(settings.knockout_lock_deadline) > serverNow);
+  // Interruptor manual del admin: cuando true, los picks de KO no se muestran
+  // en la pestaña Quinielas (excepto al propio admin). Se combina con el gating
+  // por knockoutEditingOpen; cualquiera de las dos vías puede ocultarlos.
+  const hideKnockoutFromPicks = settings.hide_knockout_from_picks === true;
+  const showKnockoutInPicks = isAdmin || (!knockoutEditingOpen && !hideKnockoutFromPicks);
 
   let groupPredictions = [];
   let tiebreakPredictions = [];
@@ -265,7 +270,7 @@ export async function fetchState() {
         participant: { id: player.id, name: player.name, is_active: player.is_active, group_name: player.group_name, has_paid: player.has_paid },
         details: {
           groups: groupDetails,
-          knockout: (isAdmin || !knockoutEditingOpen) ? knockoutDetails : undefined,
+          knockout: showKnockoutInPicks ? knockoutDetails : undefined,
           bonus: bonusDetails,
         },
         summary: {
@@ -371,7 +376,7 @@ export async function fetchState() {
     // Object versions for picks view
     public_predictions: publicEntries,
     public_tiebreaks: all_tiebreaks,
-    public_knockout: (isAdmin || !knockoutEditingOpen) ? all_knockout : {},
+    public_knockout: showKnockoutInPicks ? all_knockout : {},
     public_bonus: all_bonus,
     all_profiles: all_profiles_map,
     allProfiles,
