@@ -28,9 +28,16 @@ UPDATE public.matches SET home_label = 'WM101', away_label = 'WM102' WHERE id = 
 
 -- Purga referencias huérfanas: si alguna predicción se guardó apuntando a un
 -- equipo que ya no juega su M** correspondiente, el UI no puede remaparearla y
--- solo trae confusión. Este DELETE se limita a los M** afectados por el bug.
+-- solo trae confusión. Este DELETE se limita a los M** afectados directamente
+-- (labels equivocados) y a los que dependen de ellos por cadena de WM**:
+--   * M89–M92, M97, M98        → labels malos según el bug reportado
+--   * M103                     → LM101/LM102 debía ser el 3er puesto
+--   * M101                     → depende de WM97/WM98 (arrastra el error)
+--   * M104                     → depende de WM101 (arrastra el error del lado izquierdo)
+-- R32 (M73–M88), M93–M96, M99, M100 y M102 NO se tocan: sus labels nunca fueron
+-- malos y sus predicciones siguen siendo válidas.
 DELETE FROM public.knockout_predictions
-WHERE match_number IN ('M89', 'M90', 'M91', 'M92', 'M97', 'M98', 'M103');
+WHERE match_number IN ('M89', 'M90', 'M91', 'M92', 'M97', 'M98', 'M101', 'M103', 'M104');
 
 -- Lista opcional de match_numbers editables aunque las eliminatorias globales
 -- estén cerradas. Uso: admin la rellena con ['M92', 'M98'] o similar y los
