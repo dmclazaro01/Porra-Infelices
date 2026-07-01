@@ -245,9 +245,17 @@ Deno.serve(async (req) => {
 
         const updates: Record<string, unknown> = {};
 
-        // Update team IDs if they were revealed by the BBC
-        if (homeInfo.teamId && !ourMatch.home_team_id) updates.home_team_id = homeInfo.teamId;
-        if (awayInfo.teamId && !ourMatch.away_team_id) updates.away_team_id = awayInfo.teamId;
+        // Solo rellenamos team_ids en un slot vacío cuando BBC dice que el
+        // partido está en juego o terminado. Con partidos futuros ('PreEvent'),
+        // BBC a veces "adelanta" cruces con equipos hipotéticos que no
+        // coinciden con nuestro bracket oficial, y si los persistimos aquí
+        // acaban cortocircuitando la resolución dinámica por labels (WM**).
+        // La UI ya sabe pintar la posición cuando el partido no se ha jugado.
+        const bbcMatchStarted = bm.status === 'MidEvent' || bm.status === 'PostEvent';
+        if (bbcMatchStarted) {
+          if (homeInfo.teamId && !ourMatch.home_team_id) updates.home_team_id = homeInfo.teamId;
+          if (awayInfo.teamId && !ourMatch.away_team_id) updates.away_team_id = awayInfo.teamId;
+        }
 
         // Update scores and status
         const homeScore = bm.home.totalScore;
