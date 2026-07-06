@@ -220,6 +220,19 @@ Deno.serve(async (req) => {
       const knockoutMatches = ourMatches.filter(m => m.stage === 'KNOCKOUT');
       debug.knockoutMatchCount = knockoutMatches.length;
 
+      // Procesamos las rondas en orden (R32 → R16 → QF → SF → 3º → Final)
+      // para que cuando lleguemos a R16 los actual_winner_team_id de R32 ya
+      // estén frescos en memoria y Strategy 0 (matching por labels resueltos)
+      // pueda emparejar el partido de BBC con el M** correcto.
+      const ROUND_ORDER: Record<string, number> = {
+        R32: 0, R16: 1, QF: 2, SF: 3, THIRD: 4, FINAL: 5,
+      };
+      bbcMatches.sort((a, b) => {
+        const ra = ROUND_ORDER[BBC_ROUND_MAP[a.roundName] ?? ''] ?? 99;
+        const rb = ROUND_ORDER[BBC_ROUND_MAP[b.roundName] ?? ''] ?? 99;
+        return ra - rb;
+      });
+
       for (const bm of bbcMatches) {
         const roundCode = BBC_ROUND_MAP[bm.roundName];
         if (!roundCode) {
@@ -288,6 +301,10 @@ Deno.serve(async (req) => {
             console.error(`Error updating knockout match ${ourMatch.id}:`, updateError);
           } else {
             knockoutUpdates++;
+            // Refleja los cambios en memoria para que las rondas posteriores
+            // (R16, QF…) puedan resolver los W-labels correctamente en el
+            // mismo sync sin depender de una segunda pasada.
+            Object.assign(ourMatch, updates);
           }
         }
       }
@@ -539,12 +556,53 @@ function normalizePlaceholder(placeholder: string): string | null {
   return null;
 }
 
+// Resuelve una etiqueta "WMxx" o "LMxx" a un team_id concreto a partir del
+// actual_winner_team_id del match referenciado, usando los datos ya cargados
+// en memoria. Devuelve null cuando aún no hay ganador registrado.
+function resolveWinnerLabel(label: string | null, matches: any[]): string | null {
+  if (!label) return null;
+  const isW = label.startsWith('W');
+  const isL = label.startsWith('L');
+  if (!isW && !isL) return null;
+  const mn = label.substring(1); // "M79"
+  const parent = matches.find(m => m.match_number === mn);
+  if (!parent || !parent.actual_winner_team_id) return null;
+  const winner = parent.actual_winner_team_id.toLowerCase();
+  if (isW) return winner;
+  // Loser: el otro equipo del parent, siempre que ambos IDs estén.
+  const home = parent.home_team_id?.toLowerCase();
+  const away = parent.away_team_id?.toLowerCase();
+  if (!home || !away) return null;
+  if (winner === home) return away;
+  if (winner === away) return home;
+  return null;
+}
+
 function findKnockoutMatch(
   matches: any[],
   roundCode: string,
   home: ResolvedTeam,
   away: ResolvedTeam
 ): any | null {
+  // Strategy 0: emparejar por labels W/L resueltos dinámicamente.
+  // Cuando BBC devuelve teamIds confirmados (partido en juego o terminado),
+  // buscamos el M** cuyo (home_label, away_label) resuelva a esos mismos
+  // teams siguiendo la cadena de ganadores del bracket oficial. Esto evita
+  // que Strategy 2 empareje MEX-ENG con M92 (WM79 vs WM80 = USA vs BEL)
+  // solo porque M92 tenía MEX residual de un sync antiguo.
+  if (home.teamId && away.teamId) {
+    const byResolved = matches.find(m => {
+      if (m.round !== roundCode) return false;
+      const rh = resolveWinnerLabel(m.home_label, matches);
+      const ra = resolveWinnerLabel(m.away_label, matches);
+      if (!rh || !ra) return false;
+      const h = home.teamId!.toLowerCase();
+      const a = away.teamId!.toLowerCase();
+      return (rh === h && ra === a) || (rh === a && ra === h);
+    });
+    if (byResolved) return byResolved;
+  }
+
   // Strategy 1: both teams resolved to real IDs
   if (home.teamId && away.teamId) {
     const exact = matches.find(m =>
