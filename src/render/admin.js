@@ -661,15 +661,22 @@ function renderSyncPanel(state) {
       try {
         const token = await api.getSessionToken();
         if (!token) throw new Error('No session');
-        const { data } = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-results`, {
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-results`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
+        // Leemos la respuesta para poder mostrar un error útil en vez de un
+        // silencioso "✓ Sincronizado" cuando la edge function devuelve 500.
+        const payload = await resp.json().catch(() => ({}));
+        if (!resp.ok || payload.error) throw new Error(payload.error || `HTTP ${resp.status}`);
+        // Refrescamos el estado para que las tarjetas de resultados reflejen
+        // los cambios inmediatamente en el propio panel de admin.
+        await load();
         syncBtn.textContent = '✓ Sincronizado';
         setTimeout(() => { syncBtn.textContent = '🔄 Sincronizar resultados'; syncBtn.disabled = false; }, 3000);
       } catch (e) {
         syncBtn.textContent = 'Error: ' + e.message;
-        setTimeout(() => { syncBtn.textContent = '🔄 Sincronizar resultados'; syncBtn.disabled = false; }, 3000);
+        setTimeout(() => { syncBtn.textContent = '🔄 Sincronizar resultados'; syncBtn.disabled = false; }, 5000);
       }
     },
   });

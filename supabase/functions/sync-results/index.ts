@@ -80,9 +80,30 @@ async function ensureKnockoutSlots(supabase: any) {
   return rows.length;
 }
 
+// Al llamarse desde el frontend con `Authorization: Bearer …`, el navegador
+// dispara un preflight OPTIONS que hay que responder con estos headers; si no,
+// el fetch aborta con "Failed to fetch" antes de tocar la lógica de la función.
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
+};
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  });
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   if (!SUPABASE_SERVICE_KEY) {
-    return new Response(JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return jsonResponse({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }, 500);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -338,15 +359,13 @@ Deno.serve(async (req) => {
         away_label: m.away_label,
       }));
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       groupUpdates,
       knockoutUpdates,
       apiError,
       bbcError,
       debug,
       syncAt: new Date().toISOString(),
-    }), {
-      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Sync error:', error);
@@ -356,10 +375,7 @@ Deno.serve(async (req) => {
         .upsert({ id: 1, sync_status: `error: ${error.message}` });
     } catch (_) {}
 
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error.message }, 500);
   }
 });
 
