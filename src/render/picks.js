@@ -107,6 +107,9 @@ function summarizeBreakdown(userId, state) {
     fullOrder,
     finishedGroups: finishedGroups.length,
     groupBonusPoints: b.groups.points,
+    koHits: b.knockout.hits,
+    koPossible: b.knockout.possible,
+    koPoints: b.knockout.points,
     total: b.total,
   };
 }
@@ -171,6 +174,13 @@ function renderComparisonSummary(entryA, entryB, state) {
     `${sa.exact}/${sa.exactPossible} · +${sa.exact}`,
     `${sb.exact}/${sb.exactPossible} · +${sb.exact}`,
     sa.exact, sb.exact,
+  );
+  row(
+    'Eliminatorias acertadas',
+    'Ganador de cada cruce jugado · 2 c/u',
+    `${sa.koHits}/${sa.koPossible} · +${sa.koPoints}`,
+    `${sb.koHits}/${sb.koPossible} · +${sb.koPoints}`,
+    sa.koHits, sb.koHits,
   );
   tbody.append(el('tr', { class: 'cmp-total' }, [
     el('td', { text: 'Total acumulado' }),
