@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { computeRealStandings, computeGroupPoints, getRealBestThirdsSoFar } from './scoring.js';
+import { computeRealStandings, computeGroupPoints, getRealBestThirdsSoFar, computeBonusPoints, bonusNamesMatch } from './scoring.js';
 
 // Group A, 4 teams, all 6 matches played. t1 and t2 both finish on 6 pts but
 // t1 has a clearly better goal difference, so the real classification must put
@@ -90,4 +90,43 @@ test('computeGroupPoints cuenta los mejores terceros como clasificados', () => {
     // If not in bestThirds, only b3 counts -> 1.
     assert.strictEqual(bDetail.classified, 1);
   }
+});
+
+test('computeBonusPoints da +5 por goleador y +5 por mejor jugador acertados', () => {
+  // Respuestas oficiales del torneo.
+  const topScorer = 'Mbappé';
+  const bestPlayer = 'Rodri';
+
+  // Ambos aciertos -> 10.
+  assert.strictEqual(
+    computeBonusPoints({ top_scorer: 'Mbappé', best_player: 'Rodri' }, topScorer, bestPlayer),
+    10,
+  );
+  // Solo goleador -> 5.
+  assert.strictEqual(
+    computeBonusPoints({ top_scorer: 'Mbappé', best_player: 'Lamine Yamal' }, topScorer, bestPlayer),
+    5,
+  );
+  // Ninguno / vacío -> 0.
+  assert.strictEqual(computeBonusPoints({}, topScorer, bestPlayer), 0);
+  assert.strictEqual(
+    computeBonusPoints({ top_scorer: '', best_player: null }, topScorer, bestPlayer),
+    0,
+  );
+});
+
+test('el bonus ignora mayúsculas, acentos y espacios al comparar nombres', () => {
+  const topScorer = 'Mbappé';
+  const bestPlayer = 'Rodri';
+  // Distintas ortografías del mismo nombre deben puntuar igual.
+  for (const variant of ['Mbappé', 'mbappe', '  MBAPPÉ ', 'mbappé']) {
+    assert.strictEqual(
+      computeBonusPoints({ top_scorer: variant, best_player: 'RODRI' }, topScorer, bestPlayer),
+      10,
+      `variante "${variant}" debería puntuar`,
+    );
+  }
+  // Un nombre distinto no puntúa (Rodrigo != Rodri).
+  assert.strictEqual(bonusNamesMatch('Rodrigo', 'Rodri'), false);
+  assert.strictEqual(bonusNamesMatch('', 'Rodri'), false);
 });

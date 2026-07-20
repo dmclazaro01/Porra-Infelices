@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { computeTotalPoints } from './scoring.js';
+import { computeTotalPoints, bonusNamesMatch } from './scoring.js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -254,7 +254,7 @@ export async function fetchState() {
         let status = 'missing', points = 0;
         if (predicted != null) {
           if (bonusAnswers && bonusAnswers[item.key]) {
-            status = predicted === bonusAnswers[item.key] ? 'correct' : 'wrong';
+            status = bonusNamesMatch(predicted, bonusAnswers[item.key]) ? 'correct' : 'wrong';
             points = status === 'correct' ? 5 : 0;
           } else {
             status = 'pending';

@@ -1,3 +1,24 @@
+﻿// Normaliza el nombre de un jugador para comparar el bonus (goleador / mejor
+// jugador). Ignora mayúsculas/minúsculas, acentos y espacios sobrantes, de
+// modo que "Mbappé", "mbappe" y "  MBAPPE " se consideren el mismo nombre.
+// Así cualquiera que escribiera el nombre correcto —con la ortografía que
+// fuera— recibe sus puntos.
+export function normalizeBonusName(name) {
+  if (name == null) return '';
+  return String(name)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+export function bonusNamesMatch(a, b) {
+  const na = normalizeBonusName(a);
+  const nb = normalizeBonusName(b);
+  return na !== '' && na === nb;
+}
+
 function createTeamStats(teamId) {
   return {
     team_id: teamId,
@@ -262,8 +283,8 @@ export function computeKnockoutPoints(userKnockoutPredictions, realKnockoutResul
 
 export function computeBonusPoints(userBonus, realTopScorer, realBestPlayer) {
   let points = 0;
-  if (userBonus.top_scorer && userBonus.top_scorer === realTopScorer) points += 5;
-  if (userBonus.best_player && userBonus.best_player === realBestPlayer) points += 5;
+  if (bonusNamesMatch(userBonus.top_scorer, realTopScorer)) points += 5;
+  if (bonusNamesMatch(userBonus.best_player, realBestPlayer)) points += 5;
   return points;
 }
 
@@ -338,12 +359,12 @@ export function computePointsBreakdown(userId, state) {
   const bonus = {
     top_scorer: {
       predicted: userBonus.top_scorer || null,
-      correct: !!(userBonus.top_scorer && bonusAnswers && userBonus.top_scorer === bonusAnswers.top_scorer),
+      correct: !!(bonusAnswers && bonusNamesMatch(userBonus.top_scorer, bonusAnswers.top_scorer)),
       revealed: !!(bonusAnswers && bonusAnswers.top_scorer),
     },
     best_player: {
       predicted: userBonus.best_player || null,
-      correct: !!(userBonus.best_player && bonusAnswers && userBonus.best_player === bonusAnswers.best_player),
+      correct: !!(bonusAnswers && bonusNamesMatch(userBonus.best_player, bonusAnswers.best_player)),
       revealed: !!(bonusAnswers && bonusAnswers.best_player),
     },
   };

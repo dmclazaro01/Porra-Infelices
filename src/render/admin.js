@@ -19,6 +19,7 @@ export function renderAdmin() {
   wrap.append(renderFinalBracketAssistant(state));
   wrap.append(renderMatchResults(state));
   wrap.append(renderSettingsPanel(state));
+  wrap.append(renderBonusAnswersPanel(state));
   wrap.append(renderSyncPanel(state));
 
   return wrap;
@@ -638,6 +639,64 @@ function renderSettingsPanel(state) {
           text: 'Match_numbers separados por comas. Los jugadores podrán tocar solo esos cruces aunque las eliminatorias estén cerradas. Vacío = ninguno.' }),
       ]),
     ]),
+    saveBtn,
+    saveError,
+  ]));
+
+  return panel;
+}
+
+function renderBonusAnswersPanel(state) {
+  const panel = el('article', { class: 'panel' });
+  panel.append(el('div', { class: 'panel-head' }, [
+    el('div', { class: 'panel-title', text: 'Bonus oficial (goleador / mejor jugador)' }),
+    el('span', { class: 'badge', text: '+5 c/u' }),
+  ]));
+
+  const answers = state.bonus_answers || {};
+
+  const topScorerInput = el('input', {
+    type: 'text', maxlength: '60', placeholder: 'Ej: Mbappé',
+    value: answers.top_scorer || '',
+  });
+  const bestPlayerInput = el('input', {
+    type: 'text', maxlength: '60', placeholder: 'Ej: Rodri',
+    value: answers.best_player || '',
+  });
+
+  const saveError = el('div', { class: 'error' });
+  const saveBtn = el('button', {
+    class: 'primary',
+    text: 'Guardar bonus oficial',
+    onclick: async () => {
+      saveError.textContent = '';
+      try {
+        await api.adminUpdateBonusAnswers(
+          topScorerInput.value.trim() || null,
+          bestPlayerInput.value.trim() || null,
+        );
+        await load();
+        saveError.textContent = '✓ Guardado';
+        saveError.style.color = 'var(--green)';
+        setTimeout(() => { saveError.textContent = ''; saveError.style.color = ''; }, 3000);
+      } catch (e) {
+        saveError.textContent = e.message;
+        saveError.style.color = 'var(--red)';
+      }
+    },
+  });
+
+  panel.append(el('div', { class: 'fee-editor' }, [
+    el('div', { class: 'fee-row' }, [
+      el('label', { class: 'fee-label', text: 'Máximo goleador:' }),
+      topScorerInput,
+    ]),
+    el('div', { class: 'fee-row' }, [
+      el('label', { class: 'fee-label', text: 'Mejor jugador:' }),
+      bestPlayerInput,
+    ]),
+    el('div', { class: 'muted-line', style: 'font-size:11px',
+      text: 'Al guardar, quien haya acertado el nombre suma +5 por cada uno. La comparación ignora mayúsculas, acentos y espacios. Vacío = sin revelar.' }),
     saveBtn,
     saveError,
   ]));
